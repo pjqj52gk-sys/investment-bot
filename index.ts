@@ -80,11 +80,16 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   // AI分析
   const analysis = await analyzeInvestment(technical, tavilyData);
 
+  const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY' 
+    ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price ? '$' + analysis.strategy.price : 'なし'}\n推奨数量: ${analysis.strategy.quantity}`
+    : '様子見';
+
   const embed = new EmbedBuilder()
     .setTitle(`${name} (${ticker}) 分析結果`)
     .setColor(analysis.judgment === 'BUY' ? 0x00ff00 : analysis.judgment === 'SELL' ? 0xff0000 : 0xffff00)
     .addFields(
       { name: '判定', value: `**${analysis.judgment}**`, inline: true },
+      { name: '戦略・注文方法', value: `\`\`\`\n${strategyStr}\n\`\`\``, inline: true },
       { name: '理由', value: analysis.reason },
       { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` },
       { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
