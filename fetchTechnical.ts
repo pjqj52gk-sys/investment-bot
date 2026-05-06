@@ -72,11 +72,25 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
       ? "上昇傾向" 
       : "下落傾向";
 
+    // 5分足トレンド（直近2日間の5分足）
+    const fiveMin = await yahooFinance.chart(yahooSymbol, { 
+      period1: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), 
+      interval: '5m' 
+    });
+    const fiveMinCloses = fiveMin.quotes.map(q => q.close).filter((c): c is number => c !== null);
+    let veryShortTrend = "データ不足";
+    if (fiveMinCloses.length >= 3) {
+      veryShortTrend = fiveMinCloses[fiveMinCloses.length - 1] > fiveMinCloses[fiveMinCloses.length - 3] 
+        ? "上昇傾向" 
+        : "下落傾向";
+    }
+
     const summary = `
 【短期分析サマリー】
 現在値: ${currentPrice} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%)
 5日線: ${ma5?.toFixed(2)}, 25日線: ${ma25?.toFixed(2)}
 1時間足トレンド: ${shortTermTrend}
+5分足トレンド: ${veryShortTrend}
 MACDヒストグラム: ${macdHist.toFixed(2)}
     `.trim();
 
