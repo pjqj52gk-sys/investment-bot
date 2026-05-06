@@ -86,14 +86,15 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   const embed = new EmbedBuilder()
     .setTitle(`${name} (${ticker}) 分析結果`)
     .setColor(analysis.judgment === 'BUY' ? 0x00ff00 : analysis.judgment === 'SELL' ? 0xff0000 : 0xffff00)
+    .setFooter({ text: `データ取得日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}` })
+    .setTimestamp()
     .addFields(
       { name: '判定', value: `**${analysis.judgment}**`, inline: true },
       { name: '戦略・注文方法', value: `\`\`\`\n${strategyStr}\n\`\`\``, inline: true },
       { name: '理由', value: analysis.reason },
       { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` },
-      { name: '取得情報サマリー', value: tavilyData.summary.substring(0, 1024) }
+      { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
     )
-    .setFooter({ text: `データ取得日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}` })
     .setTimestamp();
 
   return embed;
