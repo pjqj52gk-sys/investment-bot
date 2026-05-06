@@ -154,8 +154,8 @@ client.once('ready', () => {
   // runBatchAnalysis();
 
   // 【日本株サイクル】
-  // 平日 08:30 予測
-  cron.schedule('30 8 * * 1-5', () => {
+  // 平日 08:40 予測
+  cron.schedule('40 8 * * 1-5', () => {
     runBatchAnalysis(JP_WATCH_LIST, "日本株(前場前)");
   });
   // 平日 15:30 反省
