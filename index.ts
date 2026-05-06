@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js
 import { fetchTavilyData } from './fetchTavily';
 import { fetchTechnicalData } from './fetchTechnical';
 import { analyzeInvestment } from './aiAnalyzer';
+import { savePrediction } from './logger';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 
@@ -79,6 +80,9 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
 
   // AI分析
   const analysis = await analyzeInvestment(technical, tavilyData);
+
+  // 予測結果をログに保存 (自己学習用)
+  savePrediction(ticker, technical.currentPrice, analysis);
 
   const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY' 
     ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price ? '$' + analysis.strategy.price : 'なし'}\n推奨数量: ${analysis.strategy.quantity}`
