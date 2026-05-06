@@ -34,7 +34,7 @@ const JP_WATCH_LIST = [
 const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
   { ticker: "SMR", name: "NuScale Power" },
-  { ticker: "BLDP", name: "Ballard Power" },
+  { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.5215 },
   { ticker: "TQQQ", name: "ProShares QQQ 3x" },
   { ticker: "SOXL", name: "Semi Bull 3x" },
   { ticker: "SOXS", name: "Semi Bear 3x" },
