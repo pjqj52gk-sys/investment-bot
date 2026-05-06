@@ -100,18 +100,28 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   return embed;
 }
 
-async function sendToChannel(channelId: string, embed: EmbedBuilder) {
+async function sendToChannel(channelId: string, embedOrContent: EmbedBuilder | string) {
   try {
     const channel = await client.channels.fetch(channelId) as TextChannel;
-    if (channel) await channel.send({ embeds: [embed] });
-  } catch (error) {
-    console.error(`[ERROR] Unknown Channel ${channelId}`);
+    if (channel) {
+      if (typeof embedOrContent === 'string') {
+        await channel.send(embedOrContent);
+      } else {
+        await channel.send({ embeds: [embedOrContent] });
+      }
+    } else {
+      console.error(`[ERROR] Channel not found: ${channelId}`);
+    }
+  } catch (error: any) {
+    console.error(`[ERROR] Failed to send to channel ${channelId}:`, error.message);
   }
 }
 
 async function runBatchAnalysis(list: any[], type: string) {
   const channelId = process.env.DISCORD_CHANNEL_ID || "";
   console.log(`=== ${type} 一括分析開始 ===`);
+  
+  await sendToChannel(channelId, `🚀 **${type}** の定期一括分析を開始します...`);
   
   for (const stock of list) {
     const embed = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
@@ -226,6 +236,12 @@ client.on('messageCreate', async (message) => {
     const reply = await message.reply("📊 1週間の集計を開始します...");
     const report = await consolidateRulebook();
     message.reply(report);
+    return;
+  }
+
+  // チャンネルID確認コマンド
+  if (content === 'ID') {
+    message.reply(`このチャンネルのIDは: \`${message.channel.id}\` です。\n設定されているIDは: \`${process.env.DISCORD_CHANNEL_ID}\` です。\n一致していない場合は .env を修正してください。`);
     return;
   }
 
