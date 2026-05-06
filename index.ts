@@ -80,7 +80,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   savePrediction(ticker, technical.currentPrice, analysis);
 
   const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY' 
-    ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price || 'なし'}\n推奨数量: ${analysis.strategy.quantity}\nリスク: ${analysis.strategy.risk_level}\n配分: ${analysis.strategy.allocation_percent}%`
+    ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price || 'なし'}\n利確目安: ${analysis.strategy.take_profit || 'なし'}\n損切目安: ${analysis.strategy.stop_loss || 'なし'}\n推奨数量: ${analysis.strategy.quantity}\nリスク: ${analysis.strategy.risk_level}\n配分: ${analysis.strategy.allocation_percent}%`
     : '様子見';
 
   const embed = new EmbedBuilder()
