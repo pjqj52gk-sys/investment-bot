@@ -42,20 +42,20 @@ export async function analyzeInvestment(
 あなたは世界トップクラスの短期投機家です。
 「数日から最大1週間以内」の短期利益確定を狙うデイトレ・スイングの視点で判断を下してください。
 ${lessons ? `\n【過去の失敗と教訓（必ず守ること）】\n${lessons}\n` : ''}
-【出力形式】
-JSON形式で出力してください。
 
-【スキーマ】
-{
-  "judgment": "BUY | DON'T BUY | SELL | HOLD",
-  "confidence": 0.0-1.0,
-  "reason": "根拠を日本語で",
-  "strategy": {
-    "order_type": "MARKET | LIMIT",
-    "price": 数値またはnull,
-    "quantity": "推奨数量"
-  }
-}
+【出力項目 (JSON)】
+- judgment: "BUY", "SELL", "HOLD", "DON'T BUY" のいずれか
+- confidence: 0.0-1.0
+- strategy: 注文方法や目標価格などの戦略（order_type: "MARKET" or "LIMIT", price: number, quantity: string）
+- reason: 判断の理由。**必ず以下の2点を含めて論理的に説明してください**：
+    1. テクニカル指標（MACD、移動平均線、トレンド）から読み取れる売買サイン。
+    2. Tavilyで取得した最新ニュースや業績予想（ファンダメンタルズ）から読み取れるポジティブ・ネガティブ要素。
+    ※チャートだけ、あるいはニュースだけに偏らず、両方を統合したプロの視点で書いてください。
+
+【思考プロセス】
+1. テクニカル分析で「エントリー/エグジットのタイミング」を測る。
+2. ニュース分析で「その銘柄を今持つべき根拠（ファンダメンタルズの裏付け）」を確認する。
+3. 両者が合致する場合にのみ強い判断を下す。矛盾する場合は慎重な判断(HOLD/DON'T BUY)を下す。
 `.trim();
 
   const userPrompt = `
