@@ -255,13 +255,23 @@ client.on('messageCreate', async (message) => {
   const usStock = US_WATCH_LIST.find(s => s.ticker === content || s.name.toUpperCase() === content);
   const target = jpStock || usStock;
 
-  if (target) {
-    const embed = await getAnalysisEmbed(target.ticker, target.name, (target as any).isOwned, (target as any).avgPrice);
-    if (embed) message.reply({ embeds: [embed] });
-  } else if (/^[0-9A-Z.]+$/.test(content)) {
-    // リスト外の銘柄コード（例: TSLA.T など）が直接打たれた場合
-    const embed = await getAnalysisEmbed(content, content);
-    if (embed) message.reply({ embeds: [embed] });
+  if (target || /^[0-9A-Z.]+$/.test(content)) {
+    const ticker = target ? target.ticker : content;
+    const name = target ? target.name : content;
+    const isOwned = target ? (target as any).isOwned : false;
+    const avgPrice = target ? (target as any).avgPrice : null;
+
+    const statusMsg = await message.reply(`🔍 **${name} (${ticker})** を分析中です。最新のニュースとチャートを読み込んでいます...`);
+    
+    // 「入力中...」を表示
+    await message.channel.sendTyping();
+
+    const embed = await getAnalysisEmbed(ticker, name, isOwned, avgPrice);
+    if (embed) {
+      await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [embed] });
+    } else {
+      await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。コードが正しいか確認してください。`);
+    }
   }
 });
 
