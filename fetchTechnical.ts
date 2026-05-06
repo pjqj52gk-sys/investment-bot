@@ -25,6 +25,12 @@ function calculateEMA(data: number[], p: number): number[] {
   return ema;
 }
 
+export interface MarketContext {
+  nikkei: { price: number, change: string };
+  sp500: { price: number, change: string };
+  vix: { price: number, change: string };
+}
+
 export async function fetchTechnicalData(ticker: string): Promise<TechnicalData | string> {
   // 日本株か米国株か判定
   const isJpStock = /^[0-9]{3,4}[0-9A-Z]?$/.test(ticker);
@@ -110,5 +116,31 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);
     return "テクニカルデータ取得エラー";
+  }
+}
+
+export async function fetchMarketContext(): Promise<MarketContext> {
+  const symbols = ["^N225", "^GSPC", "^VIX"];
+  try {
+    const results = await yahooFinance.quote(symbols);
+    const getInfo = (sym: string) => {
+      const q = results.find(r => r.symbol === sym);
+      return {
+        price: q?.regularMarketPrice || 0,
+        change: q?.regularMarketChangePercent?.toFixed(2) + "%" || "0%"
+      };
+    };
+    return {
+      nikkei: getInfo("^N225"),
+      sp500: getInfo("^GSPC"),
+      vix: getInfo("^VIX")
+    };
+  } catch (error) {
+    console.error("Market context error:", error);
+    return {
+      nikkei: { price: 0, change: "0%" },
+      sp500: { price: 0, change: "0%" },
+      vix: { price: 0, change: "0%" }
+    };
   }
 }

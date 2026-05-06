@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js';
 import { fetchTavilyData } from './fetchTavily';
-import { fetchTechnicalData } from './fetchTechnical';
+import { fetchTechnicalData, fetchMarketContext } from './fetchTechnical';
 import { analyzeInvestment } from './aiAnalyzer';
 import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
@@ -52,6 +52,10 @@ const US_WATCH_LIST = [
 ];
 
 async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null) {
+  // 市場全体の地合いを取得
+  const marketContext = await fetchMarketContext();
+  const totalCapital = Number(process.env.TOTAL_CAPITAL) || 0;
+
   // テクニカルデータ取得
   const technical = await fetchTechnicalData(ticker);
   if (typeof technical === 'string') return null;
@@ -80,13 +84,13 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   if (typeof tavilyData === 'string') return null;
 
   // AI分析
-  const analysis = await analyzeInvestment(technical, tavilyData);
+  const analysis = await analyzeInvestment(technical, tavilyData, totalCapital, marketContext);
 
   // 予測結果をログに保存 (自己学習用)
   savePrediction(ticker, technical.currentPrice, analysis);
 
   const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY' 
-    ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price ? '$' + analysis.strategy.price : 'なし'}\n推奨数量: ${analysis.strategy.quantity}`
+    ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price || 'なし'}\n推奨数量: ${analysis.strategy.quantity}\nリスク: ${analysis.strategy.risk_level}\n配分: ${analysis.strategy.allocation_percent}%`
     : '様子見';
 
   const embed = new EmbedBuilder()

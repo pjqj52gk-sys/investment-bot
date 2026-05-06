@@ -18,7 +18,7 @@ export async function fetchTavilyData(ticker: string, name: string): Promise<Tav
     return "APIキー設定エラー";
   }
 
-  const query = `Provide the latest financial news, current stock price, fundamentals, and market sentiment for ${name} (${ticker} stock). Summarize the current situation.`;
+  const query = `Provide the latest financial news, stock price, fundamentals, industry trends, competitors, and market sentiment for ${name} (${ticker} stock). Summarize the current situation for short-term trading.`;
 
   try {
     const response = await axios.post(

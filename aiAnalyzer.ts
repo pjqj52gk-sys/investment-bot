@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import { TechnicalData } from './fetchTechnical';
+import { TechnicalData, MarketContext } from './fetchTechnical';
 import { TavilyResult } from './fetchTavily';
 
 dotenv.config();
@@ -21,12 +21,16 @@ export interface InvestmentDecision {
     order_type: "MARKET" | "LIMIT";
     price: number | null;
     quantity: string;
+    risk_level: "LOW" | "MEDIUM" | "HIGH";
+    allocation_percent: number;
   };
 }
 
 export async function analyzeInvestment(
   technical: TechnicalData,
-  tavily: TavilyResult
+  tavily: TavilyResult,
+  totalCapital: number = 0,
+  marketContext?: MarketContext
 ): Promise<InvestmentDecision> {
   
   const model = "o1";
@@ -46,16 +50,17 @@ ${lessons ? `\n【過去の失敗と教訓（必ず守ること）】\n${lessons
 【出力項目 (JSON)】
 - judgment: "BUY", "SELL", "HOLD", "DON'T BUY" のいずれか
 - confidence: 0.0-1.0
-- strategy: 注文方法や目標価格などの戦略（order_type: "MARKET" or "LIMIT", price: number, quantity: string）
-- reason: 判断の理由。**必ず以下の2点を含めて論理的に説明してください**：
-    1. テクニカル指標（MACD、移動平均線、トレンド）から読み取れる売買サイン。
-    2. Tavilyで取得した最新ニュースや業績予想（ファンダメンタルズ）から読み取れるポジティブ・ネガティブ要素。
-    ※チャートだけ、あるいはニュースだけに偏らず、両方を統合したプロの視点で書いてください。
-
-【思考プロセス】
-1. テクニカル分析で「エントリー/エグジットのタイミング」を測る。
-2. ニュース分析で「その銘柄を今持つべき根拠（ファンダメンタルズの裏付け）」を確認する。
-3. 両者が合致する場合にのみ強い判断を下す。矛盾する場合は慎重な判断(HOLD/DON'T BUY)を下す。
+- strategy: {
+    "order_type": "MARKET | LIMIT",
+    "price": number | null,
+    "quantity": "推奨数量 (例: 10株)",
+    "risk_level": "LOW | MEDIUM | HIGH",
+    "allocation_percent": 資金の何%を割り当てるべきか (0-100)
+  }
+- reason: 判断の理由。以下の3点を含めてください：
+    1. テクニカル指標のサイン
+    2. ニュース・ファンダメンタルズ要素
+    3. 市場全体の地合い(Market Context)との相関
 `.trim();
 
   const userPrompt = `
@@ -67,6 +72,12 @@ ${technical.summary}
 
 【最新の市場・ニュース・ファンダメンタルズ情報】
 ${tavily.summary}
+
+【市場全体の地合い (Market Context)】
+${marketContext ? `日経平均: ${marketContext.nikkei.price} (${marketContext.nikkei.change}), S&P500: ${marketContext.sp500.price} (${marketContext.sp500.change}), VIX(恐怖指数): ${marketContext.vix.price}` : 'なし'}
+
+【資産状況】
+総予算: ${totalCapital} JPY
 `.trim();
 
   try {
