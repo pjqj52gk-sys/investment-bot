@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js
 import { fetchTavilyData } from './fetchTavily';
 import { fetchTechnicalData } from './fetchTechnical';
 import { analyzeInvestment } from './aiAnalyzer';
-import { runReflection } from './reflection';
+import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -113,21 +113,37 @@ async function sendToChannel(channelId: string, embed: EmbedBuilder) {
   }
 }
 
-async function runBatchAnalysis() {
+async function runBatchAnalysis(list: any[], type: string) {
   const channelId = process.env.DISCORD_CHANNEL_ID || "";
+  console.log(`=== ${type} 一括分析開始 ===`);
   
-  console.log("=== 日本株(定期) 一括分析開始 ===");
-  for (const stock of JP_WATCH_LIST) {
+  for (const stock of list) {
     const embed = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
     if (embed) await sendToChannel(channelId, embed);
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
+}
 
-  console.log("=== 米国株(定期) 一括分析開始 ===");
-  for (const stock of US_WATCH_LIST) {
-    const embed = await getAnalysisEmbed(stock.ticker, stock.name);
-    if (embed) await sendToChannel(channelId, embed);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+async function runBatchReflection(list: any[], type: string) {
+  const channelId = process.env.DISCORD_CHANNEL_ID || "";
+  console.log(`=== ${type} 自動反省会開始 ===`);
+  
+  let memoCount = 0;
+  for (const stock of list) {
+    const result = await runReflection(stock.ticker);
+    if (typeof result !== 'string') {
+      memoCount++;
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  if (memoCount > 0) {
+    const embed = new EmbedBuilder()
+      .setTitle(`🔔 ${type} 自動反省会完了`)
+      .setDescription(`${memoCount} 件の新しい気づき（メモ）をデータ蓄積しました。週末にまとめて学習します。`)
+      .setColor(0x3498db)
+      .setTimestamp();
+    await sendToChannel(channelId, embed);
   }
 }
 
@@ -137,15 +153,37 @@ client.once('ready', () => {
   // 起動時に1回実行
   // runBatchAnalysis();
 
-  // 定期実行スケジュール
-  // 日本株: 平日 15:10
-  cron.schedule('10 15 * * 1-5', () => {
-    runBatchAnalysis();
+  // 【日本株サイクル】
+  // 平日 08:30 予測
+  cron.schedule('30 8 * * 1-5', () => {
+    runBatchAnalysis(JP_WATCH_LIST, "日本株(前場前)");
+  });
+  // 平日 15:30 反省
+  cron.schedule('30 15 * * 1-5', () => {
+    runBatchReflection(JP_WATCH_LIST, "日本株(大引け後)");
   });
   
-  // 米国株: 平日 06:00
-  cron.schedule('0 6 * * 2-6', () => {
-    runBatchAnalysis();
+  // 【米国株サイクル】
+  // 平日 22:00 予測
+  cron.schedule('0 22 * * 1-5', () => {
+    runBatchAnalysis(US_WATCH_LIST, "米国株(オープン前)");
+  });
+  // 平日 06:30 反省
+  cron.schedule('30 6 * * 2-6', () => {
+    runBatchReflection(US_WATCH_LIST, "米国株(クローズ後)");
+  });
+
+  // 【週末：統計学習・ルールブック更新】
+  // 毎週土曜日 10:00
+  cron.schedule('0 10 * * 6', async () => {
+    const channelId = process.env.DISCORD_CHANNEL_ID || "";
+    const report = await consolidateRulebook();
+    const embed = new EmbedBuilder()
+      .setTitle("🧠 週末・自己学習アップデート完了")
+      .setDescription(report)
+      .setColor(0x9b59b6)
+      .setTimestamp();
+    await sendToChannel(channelId, embed);
   });
 });
 
@@ -164,7 +202,34 @@ client.on('messageCreate', async (message) => {
     
     const replyMessage = await message.reply(`🧠 ${ticker} の過去の予測結果を振り返り、学習しています...`);
     const result = await runReflection(ticker);
-    await replyMessage.edit(result || "エラーが発生しました。");
+    
+    if (typeof result === 'string') {
+      await replyMessage.edit(result);
+    } else {
+      const embed = new EmbedBuilder()
+        .setTitle(`🧠 反省会結果: ${ticker}`)
+        .setDescription(`評価: ${result.evaluation}\n\n価格変動: ${result.priceChange}`)
+        .addFields({ name: '今回の教訓(メモ)', value: result.lesson })
+        .setColor(0x3498db)
+        .setTimestamp();
+      await replyMessage.edit({ content: '', embeds: [embed] });
+    }
+    return;
+  }
+
+  // ルール確認コマンド
+  if (content === 'ルール') {
+    const lessonsFile = './logs/lessons.txt';
+    const lessons = fs.existsSync(lessonsFile) ? fs.readFileSync(lessonsFile, 'utf-8') : "まだ学習したルールはありません。";
+    message.reply(`📜 **現在の公式ルールブック**\n\`\`\`\n${lessons}\n\`\`\``);
+    return;
+  }
+
+  // 手動での統計分析（管理者用）
+  if (content === '学習実行') {
+    const reply = await message.reply("📊 1週間の集計を開始します...");
+    const report = await consolidateRulebook();
+    message.reply(report);
     return;
   }
   

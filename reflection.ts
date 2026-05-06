@@ -13,9 +13,18 @@ const openai = new OpenAI({
 
 const logsDir = path.join(process.cwd(), 'logs');
 const predictionsFile = path.join(logsDir, 'predictions.json');
+const memosFile = path.join(logsDir, 'memos.json');
 const lessonsFile = path.join(logsDir, 'lessons.txt');
 
-export async function runReflection(ticker: string): Promise<string | null> {
+export interface MemoEntry {
+  timestamp: string;
+  ticker: string;
+  evaluation: string;
+  lesson: string;
+  priceChange: string;
+}
+
+export async function runReflection(ticker: string): Promise<{ evaluation: string, lesson: string, priceChange: string } | string> {
   if (!fs.existsSync(predictionsFile)) {
     return "予測ログがまだありません。";
   }
@@ -76,16 +85,81 @@ export async function runReflection(ticker: string): Promise<string | null> {
 
     const result = JSON.parse(content);
 
-    // 新しい教訓があれば lessons.txt に書き込む
-    if (result.lesson) {
-      const lessonText = `[${ticker}] ${result.lesson}\n`;
-      fs.appendFileSync(lessonsFile, lessonText, 'utf-8');
+    // デイリーメモとして保存（直接ルールブックは更新しない）
+    let memos: MemoEntry[] = [];
+    if (fs.existsSync(memosFile)) {
+      memos = JSON.parse(fs.readFileSync(memosFile, 'utf-8'));
     }
+    
+    const newMemo: MemoEntry = {
+      timestamp: new Date().toISOString(),
+      ticker,
+      evaluation: result.evaluation,
+      lesson: result.lesson || "特になし",
+      priceChange: `${priceChange > 0 ? '+' : ''}${percentChange}%`
+    };
+    memos.push(newMemo);
+    fs.writeFileSync(memosFile, JSON.stringify(memos, null, 2), 'utf-8');
 
-    return `【反省会結果: ${ticker}】\n当時の株価: ${oldPrice} -> 現在: ${currentPrice} (${percentChange}%)\n\n評価: ${result.evaluation}\n${result.lesson ? `\n🧠 新しい教訓を学習しました:\n${result.lesson}` : ''}`;
+    return {
+      evaluation: result.evaluation,
+      lesson: result.lesson || "特になし",
+      priceChange: `${priceChange > 0 ? '+' : ''}${percentChange}%`
+    };
 
   } catch (error) {
     console.error("反省会エラー:", error);
     return "反省会の実行中にエラーが発生しました。";
+  }
+}
+
+/**
+ * 溜まったメモを統計的に分析し、公式ルールブック(lessons.txt)をアップデートする
+ */
+export async function consolidateRulebook(): Promise<string> {
+  if (!fs.existsSync(memosFile)) return "分析するメモがありません。";
+
+  const memos: MemoEntry[] = JSON.parse(fs.readFileSync(memosFile, 'utf-8'));
+  if (memos.length === 0) return "分析するメモがありません。";
+
+  const currentLessons = fs.existsSync(lessonsFile) ? fs.readFileSync(lessonsFile, 'utf-8') : "まだルールはありません。";
+
+  const prompt = `
+あなたは凄腕のトレーダー兼データサイエンティストです。
+この1週間の「AIの予測と結果のメモ」を分析し、現在の「公式ルールブック(lessons.txt)」をアップデートしてください。
+
+【現在の公式ルールブック】
+${currentLessons}
+
+【今週の反省メモ一覧】
+${JSON.stringify(memos, null, 2)}
+
+【指示】
+1. メモから読み取れる「統計的な失敗パターン」や「成功パターン」を抽出してください。
+2. 既存のルールが有効であれば残し、矛盾がある場合は最新のデータを優先して修正してください。
+3. 今後のトレードの勝率を上げるための「具体的かつ簡潔な教訓リスト（5〜10個程度）」として出力してください。
+4. 出力は「箇条書きのテキストのみ」にしてください。
+`.trim();
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "o1",
+      messages: [{ role: "user", content: prompt }]
+    });
+
+    const newLessons = response.choices[0].message.content;
+    if (!newLessons) return "AIからの応答が空でした。";
+
+    // ルールブックを更新
+    fs.writeFileSync(lessonsFile, newLessons.trim(), 'utf-8');
+
+    // 読み終わったメモをアーカイブまたは削除（今回は簡単のためクリア）
+    fs.writeFileSync(memosFile, "[]", 'utf-8');
+
+    return `📊 週次統計分析が完了しました！\n\n【更新された新ルールブック】\n${newLessons}`;
+
+  } catch (error) {
+    console.error("ルールブック統合エラー:", error);
+    return "ルールブックの統合中にエラーが発生しました。";
   }
 }
