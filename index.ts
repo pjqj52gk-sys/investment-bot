@@ -1,6 +1,5 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js';
-import { fetchRecentNews } from './fetchNews';
-import { fetchTechnicalData } from './fetchTechnical';
+import { fetchTavilyData } from './fetchTavily';
 import { analyzeInvestment } from './aiAnalyzer';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -52,34 +51,12 @@ const US_WATCH_LIST = [
 async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null) {
   console.log(`Analyzing ${name} (${ticker})...`);
   
-  // テクニカルデータ取得
-  const technical = await fetchTechnicalData(ticker);
-  if (typeof technical === 'string') return null;
+  // Tavilyから市場情報・ニュースを一括取得
+  const tavilyData = await fetchTavilyData(ticker, name);
+  if (typeof tavilyData === 'string') return null;
 
-  // 手動設定がある場合は上書き
-  if (manualOwned) {
-    technical.isOwned = true;
-    if (manualAvgPrice) technical.avgPrice = manualAvgPrice;
-    
-    // サマリー内の保有情報を再計算して更新
-    const pnl = technical.currentPrice - (technical.avgPrice || 0);
-    const pnlPercent = ((pnl / (technical.avgPrice || 1)) * 100).toFixed(2);
-    const pnlInfo = `【保有状況】 取得単価: ${technical.avgPrice}, 損益: ${pnl.toFixed(2)} (${pnlPercent}%)`;
-    
-    // summaryを再構築（既存のsummaryから保有状況の行を差し替える）
-    const lines = technical.summary.split('\n');
-    const newLines = lines.map(line => line.includes('【保有状況】') ? pnlInfo : line);
-    if (!lines.some(l => l.includes('【保有状況】'))) {
-      newLines.splice(2, 0, pnlInfo);
-    }
-    technical.summary = newLines.join('\n');
-  }
-
-  // ニュース取得
-  const news = await fetchRecentNews(name);
-  
   // AI分析
-  const analysis = await analyzeInvestment(technical, news);
+  const analysis = await analyzeInvestment(tavilyData, manualOwned, manualAvgPrice);
 
   const embed = new EmbedBuilder()
     .setTitle(`${name} (${ticker}) 分析結果`)
@@ -87,7 +64,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     .addFields(
       { name: '判定', value: `**${analysis.judgment}**`, inline: true },
       { name: '理由', value: analysis.reason },
-      { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` }
+      { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
     )
     .setTimestamp();
 

@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-import { TechnicalData } from './fetchTechnical';
+import { TavilyResult } from './fetchTavily';
 
 dotenv.config();
 
@@ -22,8 +22,9 @@ export interface InvestmentDecision {
 }
 
 export async function analyzeInvestment(
-  technical: TechnicalData,
-  news: string
+  tavily: TavilyResult,
+  isOwned: boolean = false,
+  avgPrice: number | null = null
 ): Promise<InvestmentDecision> {
   
   const model = "o1";
@@ -49,12 +50,10 @@ JSON形式で出力してください。
 `.trim();
 
   const userPrompt = `
-【分析対象】 ${technical.ticker}
-【保有状況】 ${technical.isOwned ? '保有中' : '未保有'} (取得単価: ${technical.avgPrice || 'なし'})
-【テクニカル】
-${technical.summary}
-【最新ニュース】
-${news}
+【分析対象】 ${tavily.name} (${tavily.ticker})
+【保有状況】 ${isOwned ? '保有中' : '未保有'} (取得単価: ${avgPrice || 'なし'})
+【最新の市場・ニュース・ファンダメンタルズ情報】
+${tavily.summary}
 `.trim();
 
   try {
