@@ -48,19 +48,17 @@ export async function analyzeInvestment(
 ${lessons ? `\n【過去の失敗と教訓（必ず守ること）】\n${lessons}\n` : ''}
 
 【出力項目 (JSON)】
-- judgment: "BUY", "SELL", "HOLD", "DON'T BUY" のいずれか
-- confidence: 0.0-1.0
+以下のキーを持つ純粋なJSONオブジェクトのみを出力してください：
+- judgment: "BUY" | "SELL" | "HOLD" | "DON'T BUY"
+- confidence: number (0.0-1.0)
 - strategy: {
-    "order_type": "MARKET | LIMIT",
+    "order_type": "MARKET" | "LIMIT",
     "price": number | null,
     "quantity": "推奨数量 (例: 10株)",
-    "risk_level": "LOW | MEDIUM | HIGH",
-    "allocation_percent": 資金の何%を割り当てるべきか (0-100)
+    "risk_level": "LOW" | "MEDIUM" | "HIGH",
+    "allocation_percent": number (0-100)
   }
-- reason: 判断の理由。以下の3点を含めてください：
-    1. テクニカル指標のサイン
-    2. ニュース・ファンダメンタルズ要素
-    3. 市場全体の地合い(Market Context)との相関
+- reason: "判断の理由 (テクニカル、ニュース、地合いの3点を含める)"
 `.trim();
 
   const userPrompt = `
@@ -100,8 +98,14 @@ ${marketContext ? `日経平均: ${marketContext.nikkei.price} (${marketContext.
     return {
       judgment: "HOLD",
       confidence: 0,
-      reason: "分析エラーが発生しました。",
-      strategy: { order_type: "MARKET", price: null, quantity: "なし" }
+      reason: "AIによる解析中にエラーが発生しました。もう一度お試しください。",
+      strategy: { 
+        order_type: "MARKET", 
+        price: null, 
+        quantity: "なし",
+        risk_level: "MEDIUM",
+        allocation_percent: 0
+      }
     };
   }
 }
