@@ -91,8 +91,9 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
       { name: '戦略・注文方法', value: `\`\`\`\n${strategyStr}\n\`\`\``, inline: true },
       { name: '理由', value: analysis.reason },
       { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` },
-      { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
+      { name: '取得情報サマリー', value: tavilyData.summary.substring(0, 1024) }
     )
+    .setFooter({ text: `データ取得日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}` })
     .setTimestamp();
 
   return embed;
