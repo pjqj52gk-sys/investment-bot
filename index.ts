@@ -21,8 +21,6 @@ const client = new Client({
 // isOwned: true にすると保有中として分析します
 // avgPrice: 取得単価を設定すると損益計算を行います
 const JP_WATCH_LIST = [
-  { ticker: "1802", name: "大林組" },
-  { ticker: "1671", name: "WTI原油ETF" },
   { ticker: "1605", name: "INPEX" },
   { ticker: "7011", name: "三菱重工業" },
   { ticker: "7013", name: "IHI" },
@@ -30,7 +28,6 @@ const JP_WATCH_LIST = [
   { ticker: "9984", name: "ソフトバンクグループ" },
   { ticker: "6954", name: "ファナック", isOwned: true, avgPrice: 6858.00 },
   { ticker: "6324", name: "ハーモニック・ドライブ" },
-  { ticker: "278A", name: "TERRADA" },
 ];
 
 const US_WATCH_LIST = [
@@ -39,15 +36,8 @@ const US_WATCH_LIST = [
   { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.5215 },
   { ticker: "TQQQ", name: "ProShares QQQ 3x" },
   { ticker: "SOXL", name: "Semi Bull 3x" },
-  { ticker: "SOXS", name: "Semi Bear 3x" },
-  { ticker: "TSM", name: "TSMC" },
-  { ticker: "ARM", name: "ARM Holdings" },
   { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "MU", name: "Micron" },
   { ticker: "RGTI", name: "Rigetti Computing" },
-  { ticker: "VRT", name: "Vertiv" },
-  { ticker: "TSLA", name: "Tesla" },
-  { ticker: "MSFT", name: "Microsoft" },
   { ticker: "RDDT", name: "Reddit" },
 ];
 

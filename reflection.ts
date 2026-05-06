@@ -75,8 +75,11 @@ export async function runReflection(ticker: string): Promise<{ evaluation: strin
 
   try {
     const response = await openai.chat.completions.create({
-      model: "o1",
-      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "あなたは世界トップクラスの投資家です。過去の予測を厳しく評価し、教訓を抽出してください。" },
+        { role: "user", content: prompt }
+      ],
       response_format: { type: "json_object" }
     });
 

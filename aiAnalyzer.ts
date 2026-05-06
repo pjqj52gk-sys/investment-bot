@@ -33,7 +33,7 @@ export async function analyzeInvestment(
   marketContext?: MarketContext
 ): Promise<InvestmentDecision> {
   
-  const model = "o1";
+  const model = "gpt-4o";
 
   // 学習した教訓（ルールブック）を読み込む
   let lessons = "";
