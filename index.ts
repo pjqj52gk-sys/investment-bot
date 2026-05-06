@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js
 import { fetchTavilyData } from './fetchTavily';
 import { fetchTechnicalData } from './fetchTechnical';
 import { analyzeInvestment } from './aiAnalyzer';
+import { runReflection } from './reflection';
 import { savePrediction } from './logger';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -152,6 +153,20 @@ client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
   const content = message.content.trim().toUpperCase();
+
+  // 反省コマンド（例: 「反省 TSLA」）
+  if (content.startsWith('反省')) {
+    const ticker = content.replace('反省', '').trim();
+    if (!ticker) {
+      message.reply("銘柄コードを指定してください。（例: `反省 TSLA`）");
+      return;
+    }
+    
+    const replyMessage = await message.reply(`🧠 ${ticker} の過去の予測結果を振り返り、学習しています...`);
+    const result = await runReflection(ticker);
+    await replyMessage.edit(result || "エラーが発生しました。");
+    return;
+  }
   
   // 銘柄名またはコードでの個別分析（大文字小文字を区別しない）
   const jpStock = JP_WATCH_LIST.find(s => s.ticker === content || s.name.toUpperCase() === content);

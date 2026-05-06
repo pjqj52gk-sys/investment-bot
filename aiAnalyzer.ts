@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { TechnicalData } from './fetchTechnical';
 import { TavilyResult } from './fetchTavily';
 
@@ -29,10 +31,17 @@ export async function analyzeInvestment(
   
   const model = "o1";
 
+  // 学習した教訓（ルールブック）を読み込む
+  let lessons = "";
+  const lessonsFile = path.join(process.cwd(), 'logs', 'lessons.txt');
+  if (fs.existsSync(lessonsFile)) {
+    lessons = fs.readFileSync(lessonsFile, 'utf-8');
+  }
+
   const systemPrompt = `
 あなたは世界トップクラスの短期投機家です。
 「数日から最大1週間以内」の短期利益確定を狙うデイトレ・スイングの視点で判断を下してください。
-
+${lessons ? `\n【過去の失敗と教訓（必ず守ること）】\n${lessons}\n` : ''}
 【出力形式】
 JSON形式で出力してください。
 
