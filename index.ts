@@ -232,6 +232,19 @@ client.on('messageCreate', async (message) => {
     message.reply(report);
     return;
   }
+
+  // 一括分析コマンド
+  if (content === '一括分析' || content === '分析 日本') {
+    message.reply("🇯🇵 日本株の一括分析を開始します（数分かかります）...");
+    runBatchAnalysis(JP_WATCH_LIST, "日本株(手動実行)");
+    if (content === '分析 日本') return;
+  }
+  
+  if (content === '一括分析' || content === '分析 米国') {
+    message.reply("🇺🇸 米国株の一括分析を開始します（数分かかります）...");
+    runBatchAnalysis(US_WATCH_LIST, "米国株(手動実行)");
+    return;
+  }
   
   // 銘柄名またはコードでの個別分析（大文字小文字を区別しない）
   const jpStock = JP_WATCH_LIST.find(s => s.ticker === content || s.name.toUpperCase() === content);
