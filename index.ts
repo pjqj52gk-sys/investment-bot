@@ -98,7 +98,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     )
     .setTimestamp();
 
-  return embed;
+  return { embed, decision: analysis };
 }
 
 async function sendToChannel(channelId: string, embedOrContent: EmbedBuilder | string) {
@@ -277,12 +277,15 @@ client.on('messageCreate', async (message) => {
     return;
   }
   
+  const content = message.content.trim();
+
   // 銘柄名またはコードでの個別分析（大文字小文字を区別しない）
-  const jpStock = JP_WATCH_LIST.find(s => s.ticker === content || s.name.toUpperCase() === content);
-  const usStock = US_WATCH_LIST.find(s => s.ticker === content || s.name.toUpperCase() === content);
+  const jpStock = JP_WATCH_LIST.find(s => s.ticker === content || s.name === content);
+  const usStock = US_WATCH_LIST.find(s => s.ticker === content || s.name === content);
   const target = jpStock || usStock;
 
-  if (target || /^[0-9A-Z.]+$/.test(content)) {
+  // 監視リストにあるか、あるいは 1234 や NVDA のような形式か判定
+  if (target || /^[0-9A-Z.]+$/.test(content) || (content.length >= 2 && !content.includes(' '))) {
     const ticker = target ? target.ticker : content;
     const name = target ? target.name : content;
     const isOwned = target ? (target as any).isOwned : false;
@@ -293,11 +296,11 @@ client.on('messageCreate', async (message) => {
     // 「入力中...」を表示
     await message.channel.sendTyping();
 
-    const embed = await getAnalysisEmbed(ticker, name, isOwned, avgPrice);
-    if (embed) {
-      await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [embed] });
+    const res = await getAnalysisEmbed(ticker, name, isOwned, avgPrice);
+    if (res && res.embed) {
+      await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [res.embed] });
     } else {
-      await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。コードが正しいか確認してください。`);
+      await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。入力が正しいか確認してください。`);
     }
   }
 });
