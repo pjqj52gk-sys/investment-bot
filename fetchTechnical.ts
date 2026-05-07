@@ -102,33 +102,51 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     const fmpKey = process.env.FMP_API_KEY;
 
     if (ticker.endsWith('.T')) {
-      // --- 日本株: Google Finance 高精度スクレイピング ---
+      // --- 日本株: 二段構えのスクレイピング (Google + Yahoo JP) ---
+      const symbolOnly = ticker.split('.')[0];
+      
+      // 1. Google Finance 試行
       try {
-        const symbolOnly = ticker.split('.')[0];
-        const googleUrl = `https://www.google.com/finance/quote/${symbolOnly}:TYO`;
+        const googleUrl = `https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`;
         const res = await axios.get(googleUrl, {
           headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
-          }
+          },
+          timeout: 5000
         });
         
-        // 構造が変わっても対応できるように、複数のパターンで試行
-        const priceMatch = res.data.match(/data-last-price="([\d,.]+)"/) || res.data.match(/class="YMlS1d"[^>]*>¥?([\d,.]+)/);
+        const priceMatch = res.data.match(/data-last-price="([\d,.]+)"/);
         const changeMatch = res.data.match(/data-price-change-percentage="([\d,.-]+)"/);
         
         if (priceMatch && priceMatch[1]) {
           finalPrice = parseFloat(priceMatch[1].replace(/,/g, ''));
-          if (changeMatch && changeMatch[1]) {
-            finalChangePercent = parseFloat(changeMatch[1]);
-          }
+          if (changeMatch && changeMatch[1]) finalChangePercent = parseFloat(changeMatch[1]);
           isRealTime = true;
-          console.log(`[REALTIME JP] Scraped ${ticker}: ${finalPrice}`);
-        } else {
-          console.log(`[DEBUG] Scrape failed for ${ticker}: Price pattern not found in HTML.`);
+          console.log(`[REALTIME JP] Scraped from Google: ${finalPrice}`);
         }
-      } catch (e: any) {
-        console.log(`[DEBUG] Google Scraping error for ${ticker}: ${e.message}`);
+      } catch (e) {
+        console.log(`[DEBUG] Google Scrape failed, trying Yahoo JP...`);
+      }
+
+      // 2. Yahoo Finance JP 試行 (Googleがダメだった場合)
+      if (!isRealTime) {
+        try {
+          const yahooJpUrl = `https://finance.yahoo.co.jp/quote/${ticker}`;
+          const res = await axios.get(yahooJpUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1' }
+          });
+          
+          // Yahoo JP の価格抽出ロジック (数値の塊を抽出)
+          const yPriceMatch = res.data.match(/<span class="_3rA9nb_j">([\d,.]+)<\/span>/) || res.data.match(/<span class="StyledNumber[^>]*>([\d,.]+)<\/span>/);
+          if (yPriceMatch && yPriceMatch[1]) {
+            finalPrice = parseFloat(yPriceMatch[1].replace(/,/g, ''));
+            isRealTime = true;
+            console.log(`[REALTIME JP] Scraped from Yahoo JP: ${finalPrice}`);
+          }
+        } catch (e) {
+          console.log(`[DEBUG] Yahoo JP Scrape failed as well.`);
+        }
       }
     }
  else if (!ticker.includes('.')) {
