@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import axios from 'axios';
 import { fetchEnhancedFinancials, FinancialContext } from './fetchFinancials';
+import { fetchMacroContext, MacroData } from './fetchMacro';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
@@ -17,6 +18,7 @@ export interface TechnicalData {
   change: number;
   changePercent: number;
   financials?: FinancialContext;
+  macro: MacroData;
 }
 
 function calculateEMA(data: number[], p: number): number[] {
@@ -31,7 +33,8 @@ function calculateEMA(data: number[], p: number): number[] {
 export interface MarketContext {
   nikkei: { price: number, change: string };
   sp500: { price: number, change: string };
-  vix: { price: number, change: string };
+  vix: { price: number, change?: string };
+  macro: MacroData;
 }
 
 export async function fetchTechnicalData(ticker: string): Promise<TechnicalData | string> {
@@ -191,6 +194,7 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
     `.trim();
 
     const enhancedFinancials = await fetchEnhancedFinancials(ticker);
+    const macroData = await fetchMacroContext();
 
     return { 
       ticker: yahooSymbol, 
@@ -202,9 +206,10 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
       isOwned: false, 
       avgPrice: null, 
       summary, 
-      change, 
+      change: finalPrice - (quotes.length >= 2 ? (quotes[quotes.length - 2]?.close || 0) : 0), 
       changePercent: finalChangePercent,
-      financials: enhancedFinancials
+      financials: enhancedFinancials,
+      macro: macroData
     };
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);
@@ -223,10 +228,12 @@ export async function fetchMarketContext(): Promise<MarketContext> {
         change: q?.regularMarketChangePercent?.toFixed(2) + "%" || "0%"
       };
     };
+    const macroData = await fetchMacroContext();
     return {
       nikkei: getInfo("^N225"),
       sp500: getInfo("^GSPC"),
-      vix: getInfo("^VIX")
+      vix: getInfo("^VIX"),
+      macro: macroData
     };
   } catch (error) {
     console.error("Market context error:", error);

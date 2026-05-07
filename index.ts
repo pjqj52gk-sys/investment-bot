@@ -75,7 +75,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   if (typeof tavilyData === 'string') return null;
 
   // AI分析
-  const analysis = await analyzeInvestment(technical, tavilyData, totalCapital, marketContext);
+  const analysis = await analyzeInvestment(technical, tavilyData, marketContext, totalCapital);
 
   // 予測結果をログに保存 (自己学習用)
   savePrediction(ticker, technical.currentPrice, analysis);
@@ -124,10 +124,28 @@ async function runBatchAnalysis(list: any[], type: string) {
   
   await sendToChannel(channelId, `🚀 **${type}** の定期一括分析を開始します...`);
   
+  const results: { ticker: string, decision: any }[] = [];
+
   for (const stock of list) {
-    const embed = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
-    if (embed) await sendToChannel(channelId, embed);
+    const res = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
+    if (res && typeof res !== 'string') {
+      await sendToChannel(channelId, res.embed);
+      results.push({ ticker: stock.ticker, decision: res.decision });
+    }
     await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+
+  // 全銘柄の分析が終わったら、AIに「今日のおすすめ」を決めさせる
+  if (results.length > 0) {
+    const bestRes = await getBestRecommendation(results);
+    const bestEmbed = new EmbedBuilder()
+      .setTitle("✨ 本日の最強おすすめ銘柄 ✨")
+      .setColor(0xd4af37) // ゴールド
+      .setDescription(`**${bestRes.best_ticker}**\n\n${bestRes.reason}`)
+      .addFields({ name: "戦略サマリー", value: bestRes.summary })
+      .setTimestamp();
+    
+    await sendToChannel(channelId, bestEmbed);
   }
 }
 

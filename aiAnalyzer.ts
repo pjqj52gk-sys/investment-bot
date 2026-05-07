@@ -86,7 +86,14 @@ ${technical.summary}
 ${tavily.summary}
 
 【市場全体の地合い (Market Context)】
-${marketContext ? `日経平均: ${marketContext.nikkei.price} (${marketContext.nikkei.change}), S&P500: ${marketContext.sp500.price} (${marketContext.sp500.change}), VIX(恐怖指数): ${marketContext.vix.price}` : 'なし'}
+${marketContext ? `
+- 日経平均: ${marketContext.nikkei.price} (${marketContext.nikkei.change})
+- S&P500: ${marketContext.sp500.price} (${marketContext.sp500.change})
+- VIX(恐怖指数): ${marketContext.vix.price}
+- 為替 (USD/JPY): ${marketContext.macro?.usdJpy || '不明'}
+- 米10年債利回り: ${marketContext.macro?.us10Y || '不明'}%
+- 今日の重要イベント: ${marketContext.macro?.economicEvents || 'なし'}
+`.trim() : 'なし'}
 
 【資産状況】
 総予算: ${totalCapital} JPY
