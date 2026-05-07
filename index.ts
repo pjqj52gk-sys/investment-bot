@@ -30,6 +30,7 @@ const JP_WATCH_LIST = [
   { ticker: "9984.T", name: "ソフトバンクグループ" },
   { ticker: "6954.T", name: "ファナック" },
   { ticker: "6324.T", name: "ハーモニック・ドライブ" },
+  { ticker: "6857.T", name: "アドバンテスト" },
 ];
 
 const US_WATCH_LIST = [
@@ -41,6 +42,8 @@ const US_WATCH_LIST = [
   { ticker: "NVDA", name: "NVIDIA" },
   { ticker: "RGTI", name: "Rigetti Computing" },
   { ticker: "RDDT", name: "Reddit" },
+  { ticker: "ARM", name: "Arm Holdings" },
+  { ticker: "IONQ", name: "IonQ" },
 ];
 
 async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null) {
