@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js';
 import { fetchTavilyData } from './fetchTavily';
 import { fetchTechnicalData, fetchMarketContext } from './fetchTechnical';
-import { analyzeInvestment } from './aiAnalyzer';
+import { analyzeInvestment, getBestRecommendation } from './aiAnalyzer';
 import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
 import cron from 'node-cron';
