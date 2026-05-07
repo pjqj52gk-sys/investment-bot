@@ -87,9 +87,9 @@ ${tavily.summary}
 
 【市場全体の地合い (Market Context)】
 ${marketContext ? `
-- 日経平均: ${marketContext.nikkei.price} (${marketContext.nikkei.change})
-- S&P500: ${marketContext.sp500.price} (${marketContext.sp500.change})
-- VIX(恐怖指数): ${marketContext.vix.price}
+- 日経平均: ${marketContext.nikkei?.price || '不明'} (${marketContext.nikkei?.change || '不明'})
+- S&P500: ${marketContext.sp500?.price || '不明'} (${marketContext.sp500?.change || '不明'})
+- VIX(恐怖指数): ${marketContext.vix?.price || '不明'}
 - 為替 (USD/JPY): ${marketContext.macro?.usdJpy || '不明'}
 - 米10年債利回り: ${marketContext.macro?.us10Y || '不明'}%
 - 今日の重要イベント: ${marketContext.macro?.economicEvents || 'なし'}

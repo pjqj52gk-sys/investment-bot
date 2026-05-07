@@ -245,7 +245,8 @@ export async function fetchMarketContext(): Promise<MarketContext> {
     return {
       nikkei: { price: 0, change: "0%" },
       sp500: { price: 0, change: "0%" },
-      vix: { price: 0, change: "0%" }
+      vix: { price: 0 },
+      macro: { economicEvents: "不明", usdJpy: 0, us10Y: 0 }
     };
   }
 }
