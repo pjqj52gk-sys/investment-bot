@@ -94,19 +94,36 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
         : "下落傾向";
     }
 
-    // --- Finnhub Real-time Price Integration ---
+    // --- Real-time Price Integration (Finnhub & FMP) ---
     let finalPrice = currentPrice;
     let finalChangePercent = changePercent;
     const finnhubKey = process.env.FINNHUB_API_KEY;
-    if (finnhubKey) {
+    const fmpKey = process.env.FMP_API_KEY;
+
+    // US株ならFMPとFinnhubでリアルタイム取得を試みる
+    if (!ticker.includes('.')) {
       try {
-        const quoteRes = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
-        if (quoteRes.data && quoteRes.data.c) {
-          finalPrice = quoteRes.data.c;
-          finalChangePercent = quoteRes.data.dp;
+        // まずは FMP で試行 (US株に強い)
+        if (fmpKey) {
+          const fmpQuote = await axios.get(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${fmpKey}`);
+          if (fmpQuote.data && fmpQuote.data.length > 0) {
+            finalPrice = fmpQuote.data[0].price;
+            finalChangePercent = fmpQuote.data[0].changesPercentage;
+          }
+        }
+        // 次に Finnhub で補完
+        if (finnhubKey) {
+          const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
+          if (fhQuote.data && fhQuote.data.c && fhQuote.data.t > 0) {
+            // FMPより新しそうなら採用（簡易的な判断）
+            if (Math.abs(fhQuote.data.c - finalPrice) > 0.01) {
+              finalPrice = fhQuote.data.c;
+              finalChangePercent = fhQuote.data.dp;
+            }
+          }
         }
       } catch (e) {
-        console.log("Finnhub real-time fetch failed, using Yahoo.");
+        console.log("Real-time API fetch failed, using Yahoo fallback.");
       }
     }
 
