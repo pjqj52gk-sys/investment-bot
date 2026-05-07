@@ -107,11 +107,14 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
         const symbolOnly = ticker.split('.')[0];
         const googleUrl = `https://www.google.com/finance/quote/${symbolOnly}:TYO`;
         const res = await axios.get(googleUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+          headers: { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8'
+          }
         });
         
-        // jsname="vW79of" (最新価格の目印) を探す
-        const priceMatch = res.data.match(/jsname="vW79of" data-last-price="([\d,.]+)"/);
+        // 構造が変わっても対応できるように、複数のパターンで試行
+        const priceMatch = res.data.match(/data-last-price="([\d,.]+)"/) || res.data.match(/class="YMlS1d"[^>]*>¥?([\d,.]+)/);
         const changeMatch = res.data.match(/data-price-change-percentage="([\d,.-]+)"/);
         
         if (priceMatch && priceMatch[1]) {
@@ -121,11 +124,14 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
           }
           isRealTime = true;
           console.log(`[REALTIME JP] Scraped ${ticker}: ${finalPrice}`);
+        } else {
+          console.log(`[DEBUG] Scrape failed for ${ticker}: Price pattern not found in HTML.`);
         }
-      } catch (e) {
-        console.log(`[DEBUG] Google Scraping failed for ${ticker}, using Yahoo fallback.`);
+      } catch (e: any) {
+        console.log(`[DEBUG] Google Scraping error for ${ticker}: ${e.message}`);
       }
-    } else if (!ticker.includes('.')) {
+    }
+ else if (!ticker.includes('.')) {
       // --- US株: FMP & Finnhub ---
       try {
         if (fmpKey) {
