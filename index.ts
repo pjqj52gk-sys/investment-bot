@@ -277,17 +277,18 @@ client.on('messageCreate', async (message) => {
     return;
   }
   
-  const content = message.content.trim();
+  // 個別分析用に大文字化していない生の内容も取得しておく
+  const rawContent = message.content.trim();
 
   // 銘柄名またはコードでの個別分析（大文字小文字を区別しない）
-  const jpStock = JP_WATCH_LIST.find(s => s.ticker === content || s.name === content);
-  const usStock = US_WATCH_LIST.find(s => s.ticker === content || s.name === content);
+  const jpStock = JP_WATCH_LIST.find(s => s.ticker.toUpperCase() === content || s.name === rawContent);
+  const usStock = US_WATCH_LIST.find(s => s.ticker.toUpperCase() === content || s.name === rawContent);
   const target = jpStock || usStock;
 
   // 監視リストにあるか、あるいは 1234 や NVDA のような形式か判定
-  if (target || /^[0-9A-Z.]+$/.test(content) || (content.length >= 2 && !content.includes(' '))) {
+  if (target || /^[0-9A-Z.]+$/.test(content) || (rawContent.length >= 2 && !rawContent.includes(' '))) {
     const ticker = target ? target.ticker : content;
-    const name = target ? target.name : content;
+    const name = target ? target.name : rawContent;
     const isOwned = target ? (target as any).isOwned : false;
     const avgPrice = target ? (target as any).avgPrice : null;
 
