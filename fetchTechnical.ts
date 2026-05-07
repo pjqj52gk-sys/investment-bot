@@ -97,11 +97,12 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     // --- Real-time Price Integration (Finnhub & FMP & Google Scraping) ---
     let finalPrice = currentPrice;
     let finalChangePercent = changePercent;
+    let isRealTime = false;
     const finnhubKey = process.env.FINNHUB_API_KEY;
     const fmpKey = process.env.FMP_API_KEY;
 
     if (ticker.endsWith('.T')) {
-      // --- 日本株: Google Finance スクレイピング ---
+      // --- 日本株: Google Finance 高精度スクレイピング ---
       try {
         const symbolOnly = ticker.split('.')[0];
         const googleUrl = `https://www.google.com/finance/quote/${symbolOnly}:TYO`;
@@ -109,8 +110,8 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
           headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
         });
         
-        // 価格を抽出 (Google Finance の HTML 構造から数値を抜く)
-        const priceMatch = res.data.match(/data-last-price="([\d,.]+)"/);
+        // jsname="vW79of" (最新価格の目印) を探す
+        const priceMatch = res.data.match(/jsname="vW79of" data-last-price="([\d,.]+)"/);
         const changeMatch = res.data.match(/data-price-change-percentage="([\d,.-]+)"/);
         
         if (priceMatch && priceMatch[1]) {
@@ -118,6 +119,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
           if (changeMatch && changeMatch[1]) {
             finalChangePercent = parseFloat(changeMatch[1]);
           }
+          isRealTime = true;
           console.log(`[REALTIME JP] Scraped ${ticker}: ${finalPrice}`);
         }
       } catch (e) {
@@ -131,14 +133,16 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
           if (fmpQuote.data && fmpQuote.data.length > 0) {
             finalPrice = fmpQuote.data[0].price;
             finalChangePercent = fmpQuote.data[0].changesPercentage;
+            isRealTime = true;
           }
         }
         if (finnhubKey) {
           const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
           if (fhQuote.data && fhQuote.data.c && fhQuote.data.t > 0) {
-            if (Math.abs(fhQuote.data.c - finalPrice) > 0.01) {
+            if (Math.abs(fhQuote.data.c - finalPrice) > 0.01 || !isRealTime) {
               finalPrice = fhQuote.data.c;
               finalChangePercent = fhQuote.data.dp;
+              isRealTime = true;
             }
           }
         }
@@ -149,7 +153,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
 
     const summary = `
 【短期分析サマリー】
-現在値: ${finalPrice} (${finalChangePercent > 0 ? '+' : ''}${finalChangePercent.toFixed(2)}%)
+現在値: ${finalPrice} (${finalChangePercent > 0 ? '+' : ''}${finalChangePercent.toFixed(2)}%) ${isRealTime ? '⚡(Real-time)' : '🕒(Delayed)'}
 5日線: ${ma5?.toFixed(2)}, 25日線: ${ma25?.toFixed(2)}
 1時間足トレンド: ${shortTermTrend}
 5分足トレンド: ${veryShortTrend}
