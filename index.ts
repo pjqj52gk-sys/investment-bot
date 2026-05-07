@@ -4,6 +4,7 @@ import { fetchTechnicalData, fetchMarketContext } from './fetchTechnical';
 import { analyzeInvestment, getBestRecommendation } from './aiAnalyzer';
 import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
+import { loadPortfolio, addPosition, closePosition, getPortfolioSummary, Position } from './portfolio';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -98,6 +99,19 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     )
     .setTimestamp();
 
+  // AIがBUY判定かつ未保有の場合、仮想ポートフォリオに追加
+  if (analysis.judgment === 'BUY' && !manualOwned) {
+    addPosition({
+      ticker: ticker,
+      name: name,
+      buyPrice: technical.currentPrice,
+      buyDate: new Date().toISOString(),
+      takeProfit: analysis.strategy.take_profit,
+      stopLoss: analysis.strategy.stop_loss,
+      quantity: analysis.strategy.quantity
+    });
+  }
+
   return { embed, decision: analysis };
 }
 
@@ -149,6 +163,53 @@ async function runBatchAnalysis(list: any[], type: string) {
   }
 }
 
+/**
+ * ポートフォリオのアラートチェック
+ */
+async function checkPortfolioAlerts() {
+  const channelId = process.env.DISCORD_CHANNEL_ID || "";
+  const portfolio = loadPortfolio();
+  if (portfolio.length === 0) return;
+
+  console.log("=== ポートフォリオ・アラートチェック開始 ===");
+  
+  for (const pos of portfolio) {
+    try {
+      const technical = await fetchTechnicalData(pos.ticker);
+      if (typeof technical === 'string') continue;
+
+      const currentPrice = technical.currentPrice;
+      let alertMsg = "";
+      let isClosed = false;
+
+      if (pos.takeProfit && currentPrice >= pos.takeProfit) {
+        alertMsg = `💰 **利確アラート: ${pos.name} (${pos.ticker})**\n目標価格 $${pos.takeProfit} に到達しました！現在の価格: $${currentPrice}`;
+        isClosed = true;
+      } else if (pos.stopLoss && currentPrice <= pos.stopLoss) {
+        alertMsg = `⚠️ **損切アラート: ${pos.name} (${pos.ticker})**\n損切価格 $${pos.stopLoss} を下回りました。現在の価格: $${currentPrice}`;
+        isClosed = true;
+      }
+
+      if (alertMsg) {
+        const embed = new EmbedBuilder()
+          .setTitle("🚀 仮想ポートフォリオ・アラート")
+          .setDescription(alertMsg)
+          .setColor(isClosed ? 0xffa500 : 0x00ff00)
+          .setTimestamp();
+        
+        await sendToChannel(channelId, embed);
+        if (isClosed) {
+          closePosition(pos.ticker);
+          await sendToChannel(channelId, `✅ ${pos.ticker} をポートフォリオから削除しました。`);
+        }
+      }
+    } catch (e) {
+      console.error(`Alert check failed for ${pos.ticker}:`, e);
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+}
+
 async function runBatchReflection(list: any[], type: string) {
   const channelId = process.env.DISCORD_CHANNEL_ID || "";
   console.log(`=== ${type} 自動反省会開始 ===`);
@@ -196,6 +257,11 @@ client.once('ready', () => {
   // 平日 06:30 反省
   cron.schedule('30 6 * * 2-6', () => {
     runBatchReflection(US_WATCH_LIST, "米国株(クローズ後)");
+  });
+
+  // 1時間おきにポートフォリオのアラートチェック
+  cron.schedule('0 * * * *', () => {
+    checkPortfolioAlerts();
   });
 
   // 【週末：統計学習・ルールブック更新】
@@ -255,6 +321,18 @@ client.on('messageCreate', async (message) => {
     const reply = await message.reply("📊 1週間の集計を開始します...");
     const report = await consolidateRulebook();
     message.reply(report);
+    return;
+  }
+
+  // ポートフォリオ確認コマンド
+  if (content === 'ポートフォリオ' || content === 'P' || content === 'STATUS') {
+    const summary = getPortfolioSummary();
+    const embed = new EmbedBuilder()
+      .setTitle("📊 現在の仮想ポートフォリオ状況")
+      .setDescription(summary)
+      .setColor(0x2ecc71)
+      .setTimestamp();
+    message.reply({ embeds: [embed] });
     return;
   }
 
