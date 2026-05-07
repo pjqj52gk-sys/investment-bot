@@ -6,6 +6,7 @@ import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ const JP_WATCH_LIST = [
   { ticker: "7011.T", name: "三菱重工業" },
   { ticker: "7013.T", name: "IHI" },
   { ticker: "6762.T", name: "TDK" },
-  { ticker: "9984.T", name: "ソフトバンクグループ", isOwned: true, avgPrice: 6188.00 },
+  { ticker: "9984.T", name: "ソフトバンクグループ" },
   { ticker: "6954.T", name: "ファナック" },
   { ticker: "6324.T", name: "ハーモニック・ドライブ" },
 ];
