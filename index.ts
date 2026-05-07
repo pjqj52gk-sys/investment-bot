@@ -253,9 +253,13 @@ client.once('ready', () => {
   });
   
   // 【米国株サイクル】
-  // 平日 22:00 予測
+  // 平日 22:00 予測（オープン前）
   cron.schedule('0 22 * * 1-5', () => {
     runBatchAnalysis(US_WATCH_LIST, "米国株(オープン前)");
+  });
+  // 平日 22:40 分析（オープン直後）
+  cron.schedule('40 22 * * 1-5', () => {
+    runBatchAnalysis(US_WATCH_LIST, "米国株(オープン直後)");
   });
   // 平日 06:30 反省
   cron.schedule('30 6 * * 2-6', () => {
