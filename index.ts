@@ -35,15 +35,15 @@ const JP_WATCH_LIST = [
 
 const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
-  { ticker: "SMR", name: "NuScale Power" },
-  { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.5215 },
-  { ticker: "TQQQ", name: "ProShares QQQ 3x" },
+  { ticker: "SMR", name: "NuScale Power", isOwned: true, avgPrice: 13.103 },
+  { ticker: "BLDP", name: "Ballard Power" },
+  { ticker: "TQQQ", name: "ProShares QQQ 3x", isOwned: true, avgPrice: 72.265 },
   { ticker: "SOXL", name: "Semi Bull 3x" },
   { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "RGTI", name: "Rigetti Computing" },
+  { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 19.4720 },
   { ticker: "RDDT", name: "Reddit" },
   { ticker: "ARM", name: "Arm Holdings" },
-  { ticker: "IONQ", name: "IonQ" },
+  { ticker: "IONQ", name: "IonQ", isOwned: true, avgPrice: 51.53 },
 ];
 
 async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null) {
@@ -59,12 +59,12 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   if (manualOwned) {
     technical.isOwned = true;
     if (manualAvgPrice) technical.avgPrice = manualAvgPrice;
-    
+
     // サマリー内の保有情報を再計算して更新
     const pnl = technical.currentPrice - (technical.avgPrice || 0);
     const pnlPercent = ((pnl / (technical.avgPrice || 1)) * 100).toFixed(2);
     const pnlInfo = `【保有状況】 取得単価: ${technical.avgPrice}, 損益: ${pnl.toFixed(2)} (${pnlPercent}%)`;
-    
+
     // summaryを再構築（既存のsummaryから保有状況の行を差し替える）
     const lines = technical.summary.split('\n');
     const newLines = lines.map(line => line.includes('【保有状況】') ? pnlInfo : line);
@@ -84,7 +84,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   // 予測結果をログに保存 (自己学習用)
   savePrediction(ticker, technical.currentPrice, analysis);
 
-  const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY' 
+  const strategyStr = analysis.judgment !== 'HOLD' && analysis.judgment !== 'DON\'T BUY'
     ? `注文方法: ${analysis.strategy.order_type === 'LIMIT' ? '指値 (Limit)' : '成行 (Market)'}\n目標価格: ${analysis.strategy.price || 'なし'}\n利確目安: ${analysis.strategy.take_profit || 'なし'}\n損切目安: ${analysis.strategy.stop_loss || 'なし'}\n推奨数量: ${analysis.strategy.quantity}\nリスク: ${analysis.strategy.risk_level}\n配分: ${analysis.strategy.allocation_percent}%`
     : '様子見';
 
@@ -138,9 +138,9 @@ async function sendToChannel(channelId: string, embedOrContent: EmbedBuilder | s
 async function runBatchAnalysis(list: any[], type: string) {
   const channelId = process.env.DISCORD_CHANNEL_ID || "";
   console.log(`=== ${type} 一括分析開始 ===`);
-  
+
   await sendToChannel(channelId, `🚀 **${type}** の定期一括分析を開始します...`);
-  
+
   const results: { ticker: string, decision: any }[] = [];
 
   for (const stock of list) {
@@ -161,7 +161,7 @@ async function runBatchAnalysis(list: any[], type: string) {
       .setDescription(`**${bestRes.best_ticker}**\n\n${bestRes.reason}`)
       .addFields({ name: "戦略サマリー", value: bestRes.summary })
       .setTimestamp();
-    
+
     await sendToChannel(channelId, bestEmbed);
   }
 }
@@ -175,7 +175,7 @@ async function checkPortfolioAlerts() {
   if (portfolio.length === 0) return;
 
   console.log("=== ポートフォリオ・アラートチェック開始 ===");
-  
+
   for (const pos of portfolio) {
     try {
       const technical = await fetchTechnicalData(pos.ticker);
@@ -199,7 +199,7 @@ async function checkPortfolioAlerts() {
           .setDescription(alertMsg)
           .setColor(isClosed ? 0xffa500 : 0x00ff00)
           .setTimestamp();
-        
+
         await sendToChannel(channelId, embed);
         if (isClosed) {
           closePosition(pos.ticker);
@@ -216,7 +216,7 @@ async function checkPortfolioAlerts() {
 async function runBatchReflection(list: any[], type: string) {
   const channelId = process.env.DISCORD_CHANNEL_ID || "";
   console.log(`=== ${type} 自動反省会開始 ===`);
-  
+
   let memoCount = 0;
   for (const stock of list) {
     const result = await runReflection(stock.ticker);
@@ -238,7 +238,7 @@ async function runBatchReflection(list: any[], type: string) {
 
 client.once('ready', () => {
   console.log(`Logged in as ${client.user?.tag}!`);
-  
+
   // 起動時に1回実行
   // runBatchAnalysis();
 
@@ -251,7 +251,7 @@ client.once('ready', () => {
   cron.schedule('30 15 * * 1-5', () => {
     runBatchReflection(JP_WATCH_LIST, "日本株(大引け後)");
   });
-  
+
   // 【米国株サイクル】
   // 平日 22:00 予測（オープン前）
   cron.schedule('0 22 * * 1-5', () => {
@@ -297,10 +297,10 @@ client.on('messageCreate', async (message) => {
       message.reply("銘柄コードを指定してください。（例: `反省 TSLA`）");
       return;
     }
-    
+
     const replyMessage = await message.reply(`🧠 ${ticker} の過去の予測結果を振り返り、学習しています...`);
     const result = await runReflection(ticker);
-    
+
     if (typeof result === 'string') {
       await replyMessage.edit(result);
     } else {
@@ -355,13 +355,13 @@ client.on('messageCreate', async (message) => {
     runBatchAnalysis(JP_WATCH_LIST, "日本株(手動実行)");
     if (content === '分析 日本') return;
   }
-  
+
   if (content === '一括分析' || content === '分析 米国') {
     message.reply("🇺🇸 米国株の一括分析を開始します（数分かかります）...");
     runBatchAnalysis(US_WATCH_LIST, "米国株(手動実行)");
     return;
   }
-  
+
   // 個別分析用に大文字化していない生の内容も取得しておく
   const rawContent = message.content.trim();
 
@@ -378,7 +378,7 @@ client.on('messageCreate', async (message) => {
     const avgPrice = target ? (target as any).avgPrice : null;
 
     const statusMsg = await message.reply(`🔍 **${name} (${ticker})** を分析中です。最新のニュースとチャートを読み込んでいます...`);
-    
+
     // 「入力中...」を表示
     await message.channel.sendTyping();
 
