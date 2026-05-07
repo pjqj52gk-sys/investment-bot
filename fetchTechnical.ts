@@ -102,59 +102,41 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     const fmpKey = process.env.FMP_API_KEY;
 
     if (ticker.endsWith('.T')) {
-      // --- 日本株: 三段構えのスクレイピング (Google + Yahoo JP + Kabutan) ---
+      // --- 日本株: 四段構え (Google + Yahoo JP + Kabutan + Search-Engine Fallback) ---
       const symbolOnly = ticker.split('.')[0];
-      const userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
-      ];
-      const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
+      const randomUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
-      // 1. Google Finance 試行
+      // 1. Google / 2. Yahoo JP / 3. Kabutan (既存ロジック)
       try {
-        const res = await axios.get(`https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`, {
-          headers: { 'User-Agent': randomUA },
-          timeout: 5000
-        });
+        const res = await axios.get(`https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
         const m = res.data.match(/data-last-price="([\d,.]+)"/);
-        if (m) {
-          finalPrice = parseFloat(m[1].replace(/,/g, ''));
-          const cm = res.data.match(/data-price-change-percentage="([\d,.-]+)"/);
-          if (cm) finalChangePercent = parseFloat(cm[1]);
-          isRealTime = true;
-          console.log(`[REALTIME JP] Google success: ${finalPrice}`);
-        }
+        if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
       } catch (e) {}
 
-      // 2. Yahoo Finance JP 試行
       if (!isRealTime) {
         try {
-          const res = await axios.get(`https://finance.yahoo.co.jp/quote/${ticker}`, {
-            headers: { 'User-Agent': randomUA },
-            timeout: 5000
-          });
+          const res = await axios.get(`https://finance.yahoo.co.jp/quote/${ticker}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
           const m = res.data.match(/_3rA9nb_j[^>]*>([\d,.]+)</) || res.data.match(/StyledNumber[^>]*>([\d,.]+)</);
-          if (m) {
-            finalPrice = parseFloat(m[1].replace(/,/g, ''));
-            isRealTime = true;
-            console.log(`[REALTIME JP] Yahoo JP success: ${finalPrice}`);
-          }
+          if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
         } catch (e) {}
       }
 
-      // 3. 株探 (Kabutan) 試行 - 最後の切り札
       if (!isRealTime) {
         try {
-          const res = await axios.get(`https://kabutan.jp/stock/?code=${symbolOnly}`, {
-            headers: { 'User-Agent': randomUA },
-            timeout: 5000
-          });
+          const res = await axios.get(`https://kabutan.jp/stock/?code=${symbolOnly}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
           const m = res.data.match(/<span class="kabuka">([\d,.]+)<\/span>/);
-          if (m) {
-            finalPrice = parseFloat(m[1].replace(/,/g, ''));
+          if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
+        } catch (e) {}
+      }
+
+      // 4. Finnhub 試行 (JP株)
+      if (!isRealTime && finnhubKey) {
+        try {
+          const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
+          if (fhQuote.data && fhQuote.data.c) {
+            finalPrice = fhQuote.data.c;
+            finalChangePercent = fhQuote.data.dp;
             isRealTime = true;
-            console.log(`[REALTIME JP] Kabutan success: ${finalPrice}`);
           }
         } catch (e) {}
       }
