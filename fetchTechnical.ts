@@ -101,12 +101,15 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     const finnhubKey = process.env.FINNHUB_API_KEY;
     const fmpKey = process.env.FMP_API_KEY;
 
-    if (ticker.endsWith('.T')) {
+    const isJP = ticker.endsWith('.T') || /^\d{4}$/.test(ticker);
+    const cleanTicker = isJP && !ticker.endsWith('.T') ? `${ticker}.T` : ticker;
+    const symbolOnly = cleanTicker.split('.')[0];
+
+    if (isJP) {
       // --- 日本株: 四段構え (Google + Yahoo JP + Kabutan + Search-Engine Fallback) ---
-      const symbolOnly = ticker.split('.')[0];
       const randomUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
-      // 1. Google / 2. Yahoo JP / 3. Kabutan (既存ロジック)
+      // 1. Google Finance 試行
       try {
         const res = await axios.get(`https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
         const m = res.data.match(/data-last-price="([\d,.]+)"/);
@@ -115,7 +118,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
 
       if (!isRealTime) {
         try {
-          const res = await axios.get(`https://finance.yahoo.co.jp/quote/${ticker}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
+          const res = await axios.get(`https://finance.yahoo.co.jp/quote/${cleanTicker}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
           const m = res.data.match(/_3rA9nb_j[^>]*>([\d,.]+)</) || res.data.match(/StyledNumber[^>]*>([\d,.]+)</);
           if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
         } catch (e) {}

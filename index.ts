@@ -21,13 +21,13 @@ const client = new Client({
 // isOwned: true にすると保有中として分析します
 // avgPrice: 取得単価を設定すると損益計算を行います
 const JP_WATCH_LIST = [
-  { ticker: "1605", name: "INPEX" },
-  { ticker: "7011", name: "三菱重工業" },
-  { ticker: "7013", name: "IHI" },
-  { ticker: "6762", name: "TDK" },
-  { ticker: "9984", name: "ソフトバンクグループ" },
-  { ticker: "6954", name: "ファナック", isOwned: true, avgPrice: 6858.00 },
-  { ticker: "6324", name: "ハーモニック・ドライブ" },
+  { ticker: "1605.T", name: "INPEX" },
+  { ticker: "7011.T", name: "三菱重工業" },
+  { ticker: "7013.T", name: "IHI" },
+  { ticker: "6762.T", name: "TDK" },
+  { ticker: "9984.T", name: "ソフトバンクグループ" },
+  { ticker: "6954.T", name: "ファナック", isOwned: true, avgPrice: 6858.00 },
+  { ticker: "6324.T", name: "ハーモニック・ドライブ" },
 ];
 
 const US_WATCH_LIST = [
