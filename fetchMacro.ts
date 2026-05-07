@@ -9,6 +9,7 @@ export interface MacroData {
   economicEvents: string;
   usdJpy: number;
   us10Y: number;
+  unusualOptions?: string;
 }
 
 /**
@@ -49,4 +50,24 @@ export async function fetchMacroContext(): Promise<MacroData> {
   }
 
   return { economicEvents, usdJpy, us10Y };
+}
+
+/**
+ * 特定の銘柄の異常なオプション取引（大口監視）を取得
+ */
+export async function fetchUnusualOptions(ticker: string): Promise<string> {
+  if (!FMP_API_KEY) return "APIキー未設定";
+  
+  try {
+    const res = await axios.get(`https://financialmodelingprep.com/api/v4/unusual_stock_options?symbol=${ticker}&apikey=${FMP_API_KEY}`);
+    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      // 直近5件をサマリー
+      return res.data.slice(0, 5).map((o: any) => 
+        `${o.type}: ${o.strikePrice} @ ${o.expirationDate} (Vol: ${o.volume}, Price: ${o.price})`
+      ).join('\n');
+    }
+    return "目立った大口の動きなし";
+  } catch (error) {
+    return "取得失敗";
+  }
 }

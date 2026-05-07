@@ -1,7 +1,7 @@
 import YahooFinance from 'yahoo-finance2';
 import axios from 'axios';
 import { fetchEnhancedFinancials, FinancialContext } from './fetchFinancials';
-import { fetchMacroContext, MacroData } from './fetchMacro';
+import { fetchMacroContext, fetchUnusualOptions, MacroData } from './fetchMacro';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
@@ -195,6 +195,11 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
 
     const enhancedFinancials = await fetchEnhancedFinancials(ticker);
     const macroData = await fetchMacroContext();
+    
+    // 米国株の場合のみ、異常なオプション取引（大口）をチェック
+    if (!isJpStock) {
+      macroData.unusualOptions = await fetchUnusualOptions(ticker);
+    }
 
     return { 
       ticker: yahooSymbol, 

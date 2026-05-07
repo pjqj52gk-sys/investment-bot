@@ -93,6 +93,7 @@ ${marketContext ? `
 - 為替 (USD/JPY): ${marketContext.macro?.usdJpy || '不明'}
 - 米10年債利回り: ${marketContext.macro?.us10Y || '不明'}%
 - 今日の重要イベント: ${marketContext.macro?.economicEvents || 'なし'}
+- 【大口監視】異常なオプション取引: ${technical.macro?.unusualOptions || 'データなし（または日本株）'}
 `.trim() : 'なし'}
 
 【資産状況】
