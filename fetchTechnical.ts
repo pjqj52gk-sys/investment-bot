@@ -1,4 +1,6 @@
 import YahooFinance from 'yahoo-finance2';
+import axios from 'axios';
+import { fetchEnhancedFinancials, FinancialContext } from './fetchFinancials';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
@@ -14,6 +16,7 @@ export interface TechnicalData {
   summary: string;
   change: number;
   changePercent: number;
+  financials?: FinancialContext;
 }
 
 function calculateEMA(data: number[], p: number): number[] {
@@ -91,27 +94,46 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
         : "下落傾向";
     }
 
+    // --- Finnhub Real-time Price Integration ---
+    let finalPrice = currentPrice;
+    let finalChangePercent = changePercent;
+    const finnhubKey = process.env.FINNHUB_API_KEY;
+    if (finnhubKey) {
+      try {
+        const quoteRes = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
+        if (quoteRes.data && quoteRes.data.c) {
+          finalPrice = quoteRes.data.c;
+          finalChangePercent = quoteRes.data.dp;
+        }
+      } catch (e) {
+        console.log("Finnhub real-time fetch failed, using Yahoo.");
+      }
+    }
+
     const summary = `
 【短期分析サマリー】
-現在値: ${currentPrice} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%)
+現在値: ${finalPrice} (${finalChangePercent > 0 ? '+' : ''}${finalChangePercent.toFixed(2)}%)
 5日線: ${ma5?.toFixed(2)}, 25日線: ${ma25?.toFixed(2)}
 1時間足トレンド: ${shortTermTrend}
 5分足トレンド: ${veryShortTrend}
 MACDヒストグラム: ${macdHist.toFixed(2)}
     `.trim();
 
+    const enhancedFinancials = await fetchEnhancedFinancials(ticker);
+
     return { 
       ticker: yahooSymbol, 
-      currentPrice, 
+      currentPrice: finalPrice, 
       ma5, 
       ma25, 
       macd: { macd: currentMacd, signal: currentSignal, hist: macdHist }, 
       shortTermTrend, 
-      isOwned: false, // index.ts で上書きされる
-      avgPrice: null, // index.ts で上書きされる
+      isOwned: false, 
+      avgPrice: null, 
       summary, 
       change, 
-      changePercent
+      changePercent: finalChangePercent,
+      financials: enhancedFinancials
     };
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);

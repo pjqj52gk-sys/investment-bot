@@ -76,6 +76,12 @@ ${lessons ? `\n【過去の失敗と教訓（必ず守ること）】\n${lessons
 【チャート・テクニカル指標】
 ${technical.summary}
 
+【追加財務・センチメントデータ】
+- 次回決算日: ${technical.financials?.earningsDate || '不明'}
+- インサイダー取引: ${technical.financials?.insiderTransactions || 'なし'}
+- ニュースセンチメント: ${technical.financials?.sentiment ? `${technical.financials.sentiment.sentiment}% Bullish (Buzz: ${technical.financials.sentiment.buzz})` : '不明'}
+- 恐怖強欲指数 (Fear & Greed): ${technical.financials?.fearAndGreed || 'N/A'} (0-100)
+
 【最新の市場・ニュース・ファンダメンタルズ情報】
 ${tavily.summary}
 
