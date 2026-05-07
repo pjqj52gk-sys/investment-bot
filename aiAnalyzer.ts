@@ -132,3 +132,42 @@ ${marketContext ? `
     };
   }
 }
+
+/**
+ * 全銘柄の分析結果から「本日のおすすめ」を選定する
+ */
+export async function getBestRecommendation(results: { ticker: string, decision: any }[]) {
+  const prompt = `
+あなたは世界最高峰のヘッジファンドマネージャーです。
+以下の全銘柄の分析結果を読み込み、現在最も投資価値が高い（リスクリワードが良い）と思われる銘柄を1つだけ選んでください。
+
+【全銘柄の分析結果】
+${JSON.stringify(results, null, 2)}
+
+回答は必ず以下のJSON形式のみで返してください：
+{
+  "best_ticker": "銘柄コード",
+  "reason": "選定した詳細な理由（なぜ他の銘柄より優れているか）",
+  "summary": "推奨されるエントリー戦略の要約"
+}
+`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo-preview",
+      messages: [{ role: "system", content: "You are a professional fund manager. Reply in Japanese." }, { role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = response.choices[0].message.content || '{}';
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("[ERROR] Failed to get best recommendation:", error);
+    return {
+      best_ticker: results[0]?.ticker || "なし",
+      reason: "一括分析は完了しましたが、選定中にエラーが発生しました。",
+      summary: "個別の分析結果を確認してください。"
+    };
+  }
+}
