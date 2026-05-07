@@ -106,41 +106,52 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     const symbolOnly = cleanTicker.split('.')[0];
 
     if (isJP) {
-      // --- 日本株: 四段構え (Google + Yahoo JP + Kabutan + Search-Engine Fallback) ---
+      // --- 日本株: 究極のリアルタイム取得 (Yahoo JP > Nikkei > Kabutan > Google) ---
       const randomUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
 
-      // 1. Google Finance 試行
+      // 1. Yahoo Finance JP (本家)
       try {
-        const res = await axios.get(`https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
-        const m = res.data.match(/data-last-price="([\d,.]+)"/);
-        if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
+        const res = await axios.get(`https://finance.yahoo.co.jp/quote/${cleanTicker}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
+        const m = res.data.match(/_3rA9nb_j[^>]*>([\d,.]+)</) || res.data.match(/StyledNumber[^>]*>([\d,.]+)</) || res.data.match(/"price":([\d.]+)/);
+        if (m) {
+          finalPrice = parseFloat(m[1].replace(/,/g, ''));
+          isRealTime = true;
+          console.log(`[REALTIME JP] Yahoo JP success: ${finalPrice}`);
+        }
       } catch (e) {}
 
+      // 2. 日経新聞 (Nikkei)
       if (!isRealTime) {
         try {
-          const res = await axios.get(`https://finance.yahoo.co.jp/quote/${cleanTicker}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
-          const m = res.data.match(/_3rA9nb_j[^>]*>([\d,.]+)</) || res.data.match(/StyledNumber[^>]*>([\d,.]+)</);
-          if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
+          const res = await axios.get(`https://www.nikkei.com/nkd/company/?scode=${symbolOnly}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
+          const m = res.data.match(/class="m-stockPriceElm_value[^>]*>([\d,.]+)<\/span>/);
+          if (m) {
+            finalPrice = parseFloat(m[1].replace(/,/g, ''));
+            isRealTime = true;
+            console.log(`[REALTIME JP] Nikkei success: ${finalPrice}`);
+          }
         } catch (e) {}
       }
 
+      // 3. 株探 (Kabutan)
       if (!isRealTime) {
         try {
           const res = await axios.get(`https://kabutan.jp/stock/?code=${symbolOnly}`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
           const m = res.data.match(/<span class="kabuka">([\d,.]+)<\/span>/);
-          if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
+          if (m) {
+            finalPrice = parseFloat(m[1].replace(/,/g, ''));
+            isRealTime = true;
+            console.log(`[REALTIME JP] Kabutan success: ${finalPrice}`);
+          }
         } catch (e) {}
       }
 
-      // 4. Finnhub 試行 (JP株)
-      if (!isRealTime && finnhubKey) {
+      // 4. Google Finance (バックアップ)
+      if (!isRealTime) {
         try {
-          const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
-          if (fhQuote.data && fhQuote.data.c) {
-            finalPrice = fhQuote.data.c;
-            finalChangePercent = fhQuote.data.dp;
-            isRealTime = true;
-          }
+          const res = await axios.get(`https://www.google.com/finance/quote/${symbolOnly}:TYO?hl=ja`, { headers: { 'User-Agent': randomUA }, timeout: 3000 });
+          const m = res.data.match(/data-last-price="([\d,.]+)"/);
+          if (m) { finalPrice = parseFloat(m[1].replace(/,/g, '')); isRealTime = true; }
         } catch (e) {}
       }
     }
