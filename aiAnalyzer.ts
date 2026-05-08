@@ -166,7 +166,7 @@ ${JSON.stringify(buyResults, null, 2)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-turbo",
       messages: [{ role: "system", content: "あなたはプロの投資コンサルタントです。提供されたデータに基づき、常に一貫性のある論理的な判断を行ってください。" }, { role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.2,
