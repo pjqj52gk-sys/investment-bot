@@ -196,9 +196,33 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
     const enhancedFinancials = await fetchEnhancedFinancials(ticker);
     const macroData = await fetchMacroContext();
     
-    // 米国株の場合のみ、異常なオプション取引（大口）をチェック
     if (!isJpStock) {
       macroData.unusualOptions = await fetchUnusualOptions(ticker);
+    }
+
+    let analystTarget = null;
+    let analystRatings = null;
+    if (!ticker.includes('.')) {
+      try {
+        const targetRes = await fetch(`https://finnhub.io/api/v1/stock/price-target?symbol=${ticker}&token=${process.env.FINNHUB_API_KEY}`);
+        const targetData = await targetRes.json();
+        if (targetData && targetData.targetMean) {
+          analystTarget = {
+            mean: targetData.targetMean,
+            high: targetData.targetHigh,
+            low: targetData.targetLow,
+            upside: (((targetData.targetMean / finalPrice) - 1) * 100).toFixed(2) + "%"
+          };
+        }
+
+        const ratingRes = await fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${ticker}&token=${process.env.FINNHUB_API_KEY}`);
+        const ratingData = await ratingRes.json();
+        if (ratingData && ratingData.length > 0) {
+          analystRatings = ratingData[0];
+        }
+      } catch (err) {
+        console.error("Finnhub extra data fetch error:", err);
+      }
     }
 
     return { 
@@ -213,8 +237,16 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
       summary, 
       change: finalPrice - (quotes.length >= 2 ? (quotes[quotes.length - 2]?.close || 0) : 0), 
       changePercent: finalChangePercent,
-      financials: enhancedFinancials,
-      macro: macroData
+      financials: {
+        ...enhancedFinancials,
+        analystTarget,
+        analystRatings
+      },
+      macro: {
+        ...macroData,
+        analystTarget,
+        analystRatings
+      }
     };
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);

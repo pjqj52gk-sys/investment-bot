@@ -95,6 +95,8 @@ ${marketContext ? `
 - 米10年債利回り: ${marketContext.macro?.us10Y || '不明'}%
 - 今日の重要イベント: ${marketContext.macro?.economicEvents || 'なし'}
 - 【大口監視】異常なオプション取引: ${technical.macro?.unusualOptions || 'データなし（または日本株）'}
+- 【プロの予想】アナリスト目標価格: ${technical.financials?.analystTarget ? `${technical.financials.analystTarget.mean} (上昇余地: ${technical.financials.analystTarget.upside})` : '不明'}
+- 【プロの推奨】買い: ${technical.financials?.analystRatings?.strongBuy + technical.financials?.analystRatings?.buy || 0}, 売り: ${technical.financials?.analystRatings?.strongSell + technical.financials?.analystRatings?.sell || 0}
 `.trim() : 'なし'}
 
 【資産状況】
