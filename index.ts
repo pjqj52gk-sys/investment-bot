@@ -46,7 +46,7 @@ const US_WATCH_LIST = [
   { ticker: "IONQ", name: "IonQ" },
 ];
 
-async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null) {
+async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null, modelName: string = "gpt-4o-mini") {
   // 市場全体の地合いを取得
   const marketContext = await fetchMarketContext();
   const totalCapital = Number(process.env.TOTAL_CAPITAL) || 0;
@@ -79,7 +79,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   if (typeof tavilyData === 'string') return null;
 
   // AI分析
-  const analysis = await analyzeInvestment(technical, tavilyData, marketContext, totalCapital);
+  const analysis = await analyzeInvestment(technical, tavilyData, totalCapital, marketContext, modelName);
 
   // 予測結果をログに保存 (自己学習用)
   savePrediction(ticker, technical.currentPrice, analysis);
@@ -382,7 +382,8 @@ client.on('messageCreate', async (message) => {
     // 「入力中...」を表示
     await message.channel.sendTyping();
 
-    const res = await getAnalysisEmbed(ticker, name, isOwned, avgPrice);
+    // 個別分析は最強の推論モデル(o1-mini)を使用
+    const res = await getAnalysisEmbed(ticker, name, isOwned, avgPrice, "o1-mini");
     if (res && res.embed) {
       await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [res.embed] });
     } else {

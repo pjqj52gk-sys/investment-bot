@@ -32,10 +32,11 @@ export async function analyzeInvestment(
   technical: TechnicalData,
   tavily: TavilyResult,
   totalCapital: number = 0,
-  marketContext?: MarketContext
+  marketContext?: MarketContext,
+  modelName: string = "gpt-4o-mini"
 ): Promise<InvestmentDecision> {
   
-  const model = "gpt-4-turbo";
+  const model = modelName;
 
   // 学習した教訓（ルールブック）を読み込む
   let lessons = "";
