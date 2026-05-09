@@ -388,7 +388,7 @@ client.on('messageCreate', async (message) => {
     } else {
       await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。入力が正しいか確認してください。`);
     }
-  } else if (rawContent.length >= 2) {
+  } else if (rawContent.length >= 5 && (rawContent.includes('？') || rawContent.includes('?') || rawContent.length > 10)) {
     // どのコマンドや銘柄にも該当しない場合は、一般質問としてAIに聞く
     const typingMsg = await message.reply("🤔 投資アドバイザーに相談しています...");
     try {

@@ -35,7 +35,7 @@ export async function analyzeInvestment(
   marketContext?: MarketContext
 ): Promise<InvestmentDecision> {
   
-  const model = "gpt-4o";
+  const model = "gpt-4-turbo";
 
   // 学習した教訓（ルールブック）を読み込む
   let lessons = "";
