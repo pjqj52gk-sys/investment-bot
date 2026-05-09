@@ -183,3 +183,45 @@ ${JSON.stringify(buyResults, null, 2)}
     };
   }
 }
+
+/**
+ * 投資に関する一般的な質問に答える
+ */
+export async function askGeneralQuestion(question: string, marketContext: any, portfolio: any[]) {
+  const prompt = `
+あなたは世界最高峰の投資アドバイザーです。
+以下の現在の市場環境と、ユーザーの保有状況を考慮して、ユーザーの質問に日本語で親身に答えてください。
+
+【現在の市場環境】
+- 日経平均: ${marketContext.nikkei?.price} (${marketContext.nikkei?.change})
+- S&P500: ${marketContext.sp500?.price} (${marketContext.sp500?.change})
+- 為替 (USD/JPY): ${marketContext.macro?.usdJpy}
+- 米10年債利回り: ${marketContext.macro?.us10Y}%
+- 直近のイベント: ${marketContext.macro?.economicEvents}
+
+【ユーザーの保有状況】
+${JSON.stringify(portfolio, null, 2)}
+
+【ユーザーからの質問】
+"${question}"
+
+回答の指針：
+- 具体的で論理的なアドバイスを行ってください。
+- リスクとリターンの両面から説明してください。
+- 週末の持ち越しリスクなど、時期的な要因も考慮してください。
+- ユーモアを交えつつも、プロフェッショナルな口調で答えてください。
+`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-turbo",
+      messages: [{ role: "system", content: "あなたは優秀な投資アドバイザーです。" }, { role: "user", content: prompt }],
+      temperature: 0.5,
+    });
+
+    return response.choices[0].message.content || "申し訳ありません、うまく回答を生成できませんでした。";
+  } catch (error) {
+    console.error("[ERROR] Failed to answer general question:", error);
+    return "すみません、少し考え込んでしまいました（エラーが発生しました）。時間を置いてもう一度聞いてください。";
+  }
+}

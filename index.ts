@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from 'discord.js';
 import { fetchTavilyData } from './fetchTavily';
 import { fetchTechnicalData, fetchMarketContext } from './fetchTechnical';
-import { analyzeInvestment, getBestRecommendation } from './aiAnalyzer';
+import { analyzeInvestment, getBestRecommendation, askGeneralQuestion } from './aiAnalyzer';
 import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
 import { loadPortfolio, addPosition, closePosition, getPortfolioSummary, Position } from './portfolio';
@@ -387,6 +387,19 @@ client.on('messageCreate', async (message) => {
       await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [res.embed] });
     } else {
       await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。入力が正しいか確認してください。`);
+    }
+  } else if (rawContent.length >= 2) {
+    // どのコマンドや銘柄にも該当しない場合は、一般質問としてAIに聞く
+    const typingMsg = await message.reply("🤔 投資アドバイザーに相談しています...");
+    try {
+      await message.channel.sendTyping();
+      const marketContext = await fetchMarketContext();
+      const portfolio = loadPortfolio();
+      const answer = await askGeneralQuestion(rawContent, marketContext, portfolio);
+      await typingMsg.edit(answer);
+    } catch (err) {
+      console.error("[ERROR] Chat error:", err);
+      await typingMsg.edit("⚠️ 申し訳ありません、相談中にエラーが発生しました。");
     }
   }
 });
