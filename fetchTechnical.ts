@@ -220,6 +220,18 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
         if (ratingData && ratingData.length > 0) {
           analystRatings = ratingData[0];
         }
+
+        // Reddit/Twitterのソーシャルセンチメントを取得
+        const socialRes = await fetch(`https://finnhub.io/api/v1/stock/social-sentiment?symbol=${ticker}&token=${process.env.FINNHUB_API_KEY}`);
+        const socialData = await socialRes.json();
+        if (socialData) {
+          const reddit = socialData.reddit?.[0] || { mention: 0, positiveScore: 0, sentiment: 0 };
+          const twitter = socialData.twitter?.[0] || { mention: 0, positiveScore: 0, sentiment: 0 };
+          (financials as any).socialSentiment = {
+            reddit: `言及数: ${reddit.mention}, センチメント: ${reddit.sentiment?.toFixed(2)}`,
+            twitter: `言及数: ${twitter.mention}, センチメント: ${twitter.sentiment?.toFixed(2)}`
+          };
+        }
       } catch (err) {
         console.error("Finnhub extra data fetch error:", err);
       }
