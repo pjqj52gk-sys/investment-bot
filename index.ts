@@ -46,7 +46,7 @@ const US_WATCH_LIST = [
   { ticker: "IONQ", name: "IonQ" },
 ];
 
-async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null, modelName: string = "gpt-4o-mini") {
+async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boolean = false, manualAvgPrice: number | null = null, modelName: string = "gpt-4o") {
   // 市場全体の地合いを取得
   const marketContext = await fetchMarketContext();
   const totalCapital = Number(process.env.TOTAL_CAPITAL) || 0;
