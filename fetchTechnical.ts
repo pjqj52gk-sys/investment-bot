@@ -19,6 +19,7 @@ export interface TechnicalData {
   changePercent: number;
   financials?: FinancialContext;
   macro: MacroData;
+  dataTimestamp: Date;
 }
 
 function calculateEMA(data: number[], p: number): number[] {
@@ -260,7 +261,8 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
         ...macroData,
         analystTarget,
         analystRatings
-      }
+      },
+      dataTimestamp: quotes.length > 0 ? quotes[quotes.length - 1].date : new Date()
     };
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);
