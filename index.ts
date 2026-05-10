@@ -37,7 +37,7 @@ const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
   { ticker: "SMR", name: "NuScale Power" },
   { ticker: "BLDP", name: "Ballard Power" },
-  { ticker: "TQQQ", name: "ProShares QQQ 3x" },
+  { ticker: "TQQQ", name: "ProShares QQQ 3x", isOwned: true, avgPrice: 75.76 },
   { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 160.685 },
   { ticker: "NVDA", name: "NVIDIA" },
   { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 18.78 },

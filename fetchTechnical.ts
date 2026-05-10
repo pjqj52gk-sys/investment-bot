@@ -227,7 +227,7 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
         if (socialData) {
           const reddit = socialData.reddit?.[0] || { mention: 0, positiveScore: 0, sentiment: 0 };
           const twitter = socialData.twitter?.[0] || { mention: 0, positiveScore: 0, sentiment: 0 };
-          (financials as any).socialSentiment = {
+          (enhancedFinancials as any).socialSentiment = {
             reddit: `言及数: ${reddit.mention}, センチメント: ${reddit.sentiment?.toFixed(2)}`,
             twitter: `言及数: ${twitter.mention}, センチメント: ${twitter.sentiment?.toFixed(2)}`
           };
