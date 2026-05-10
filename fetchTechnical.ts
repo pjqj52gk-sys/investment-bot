@@ -102,6 +102,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     let finalPrice = currentPrice;
     let finalChangePercent = changePercent;
     let isRealTime = false;
+    let marketTime = quotes.length > 0 ? quotes[quotes.length - 1].date : new Date();
     const finnhubKey = process.env.FINNHUB_API_KEY;
     const fmpKey = process.env.FMP_API_KEY;
 
@@ -120,6 +121,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
         if (m) {
           finalPrice = parseFloat(m[1].replace(/,/g, ''));
           isRealTime = true;
+          marketTime = new Date();
           console.log(`[REALTIME JP] Yahoo JP success: ${finalPrice}`);
         }
       } catch (e) {}
@@ -177,6 +179,7 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
               finalPrice = fhQuote.data.c;
               finalChangePercent = fhQuote.data.dp;
               isRealTime = true;
+              marketTime = new Date(fhQuote.data.t * 1000);
             }
           }
         }
@@ -262,7 +265,7 @@ MACDヒストグラム: ${macdHist.toFixed(2)}
         analystTarget,
         analystRatings
       },
-      dataTimestamp: quotes.length > 0 ? quotes[quotes.length - 1].date : new Date()
+      dataTimestamp: marketTime
     };
   } catch (error) {
     console.error(`[ERROR] Technical data fetch failed for ${ticker}:`, error);
