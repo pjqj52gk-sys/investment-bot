@@ -5,6 +5,7 @@ import { analyzeInvestment, getBestRecommendation, askGeneralQuestion } from './
 import { runReflection, consolidateRulebook } from './reflection';
 import { savePrediction } from './logger';
 import { loadPortfolio, addPosition, closePosition, getPortfolioSummary, Position } from './portfolio';
+import { fetchEconomicCalendar, fetchEarningsCalendar } from './fetchCalendar';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -93,14 +94,23 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     .setColor(analysis.judgment === 'BUY' ? 0x00ff00 : analysis.judgment === 'SELL' ? 0xff0000 : 0xffff00)
     .setFooter({ text: `市場データ時刻: ${technical.dataTimestamp.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} • モデル: ${modelName}` })
     .setTimestamp(technical.dataTimestamp)
-    .addFields(
-      { name: '判定', value: `**${analysis.judgment}**`, inline: true },
-      { name: '戦略・注文方法', value: `\`\`\`\n${strategyStr}\n\`\`\``, inline: true },
-      { name: '理由', value: analysis.reason },
-      { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` },
-      { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
-    )
-    .setTimestamp();
+    .addFields({ name: '判定', value: `**${analysis.judgment}**`, inline: true });
+
+  const earnings = await fetchEarningsCalendar([ticker]);
+  if (earnings.length > 0) {
+    embed.addFields({ 
+      name: '⚠️ 決算スケジュール', 
+      value: `**${earnings[0].date} (${earnings[0].hour === 'am' ? '寄付前' : '引け後'})** に決算予定。`,
+      inline: false 
+    });
+  }
+
+  embed.addFields(
+    { name: '戦略・注文方法', value: `\`\`\`\n${strategyStr}\n\`\`\``, inline: true },
+    { name: '理由', value: analysis.reason },
+    { name: 'テクニカル状況', value: `\`\`\`\n${technical.summary}\n\`\`\`` },
+    { name: '取得情報サマリー', value: `\`\`\`\n${tavilyData.summary.substring(0, 1000)}...\n\`\`\`` }
+  );
 
   // AIがBUY判定かつ未保有の場合、仮想ポートフォリオに追加
   if (analysis.judgment === 'BUY' && !manualOwned) {
@@ -269,6 +279,18 @@ client.once('ready', () => {
   // 1時間おきにポートフォリオのアラートチェック
   cron.schedule('0 * * * *', () => {
     checkPortfolioAlerts();
+  });
+
+  // 毎朝8:30に重要指標と保有銘柄の決算を通知
+  cron.schedule('30 8 * * 1-5', async () => {
+    const channel = client.channels.cache.get(process.env.DISCORD_CHANNEL_ID!) as TextChannel;
+    if (!channel) return;
+    const eco = await fetchEconomicCalendar();
+    const portfolio = loadPortfolio();
+    const earn = await fetchEarningsCalendar(portfolio.map(p => p.ticker));
+    let msg = "☀️ **【朝の投資カレンダー】**\n\n📊 **重要指標**\n" + (eco.length ? eco.slice(0, 5).map(e => `${e.impact} ${e.event}`).join('\n') : "なし") + 
+              "\n\n💰 **保有銘柄の決算予定**\n" + (earn.length ? earn.map(e => `🔹 **${e.ticker}**: ${e.date}`).join('\n') : "なし");
+    await channel.send(msg);
   });
 
   // 【週末：統計学習・ルールブック更新】
