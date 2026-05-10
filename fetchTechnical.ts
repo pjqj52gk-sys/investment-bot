@@ -187,6 +187,8 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
     const summary = `
 【短期分析サマリー】
 現在値: ${finalPrice} (${finalChangePercent > 0 ? '+' : ''}${finalChangePercent.toFixed(2)}%) ${isRealTime ? '⚡(Real-time)' : '🕒(Delayed)'}
+当日高値: ${quotes[quotes.length - 1]?.high?.toFixed(2)}, 当日安値: ${quotes[quotes.length - 1]?.low?.toFixed(2)}
+出来高: ${quotes[quotes.length - 1]?.volume?.toLocaleString()}
 5日線: ${ma5?.toFixed(2)}, 25日線: ${ma25?.toFixed(2)}
 1時間足トレンド: ${shortTermTrend}
 5分足トレンド: ${veryShortTrend}

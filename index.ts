@@ -75,7 +75,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   }
 
   // Tavilyから市場情報・ニュースを一括取得
-  const tavilyData = await fetchTavilyData(ticker, name);
+  const tavilyData = await fetchTavilyData(ticker, name, modelName === "gpt-5.5");
   if (typeof tavilyData === 'string') return null;
 
   // AI分析

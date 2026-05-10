@@ -6,47 +6,47 @@ dotenv.config();
 export interface TavilyResult {
   ticker: string;
   name: string;
+  answer: string;
+  results: any[];
   summary: string;
-  currentPrice?: number;
-  changePercent?: number;
 }
 
-export async function fetchTavilyData(ticker: string, name: string): Promise<TavilyResult | string> {
+export async function fetchTavilyData(ticker: string, name: string, deepSearch: boolean = false): Promise<TavilyResult | string> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) {
     console.error("TAVILY_API_KEYが設定されていません。");
-    return "APIキー設定エラー";
+    return "TAVILY_API_KEYが設定されていません。";
   }
 
-  const query = `Provide the latest financial news, stock price, fundamentals, industry trends, competitors, and market sentiment for ${name} (${ticker} stock). Summarize the current situation for short-term trading.`;
+  const query = `${name} (${ticker}) stock market news analysis and latest financial reports`;
 
   try {
     const response = await axios.post(
       'https://api.tavily.com/search',
       {
+        api_key: apiKey,
         query: query,
-        search_depth: "advanced",
+        search_depth: deepSearch ? "advanced" : "basic",
         include_answer: true,
+        max_results: deepSearch ? 10 : 5,
         days: 3 // 直近3日間のニュースに絞る
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        }
       }
     );
 
-    const answer = response.data.answer;
+    const data = response.data;
     
-    // Tavilyはテキスト（answer）を返してくるので、それをそのままAIのプロンプトに渡す
+    // ニュース結果を整形
+    const summary = data.results.map((r: any) => `- ${r.title}\n  ${r.content.substring(0, 200)}...`).join('\n\n');
+
     return {
       ticker,
       name,
-      summary: answer || "詳細な情報を取得できませんでした。"
+      answer: data.answer || "回答が得られませんでした。",
+      results: data.results,
+      summary: `【AI検索回答】\n${data.answer || "なし"}\n\n【最新ニュースソース】\n${summary}`
     };
   } catch (error) {
-    console.error(`[ERROR] Tavily fetch failed for ${ticker}:`, error);
-    return "データ取得エラー";
+    console.error("Tavily APIエラー:", error);
+    return "ニュース情報の取得に失敗しました。";
   }
 }
