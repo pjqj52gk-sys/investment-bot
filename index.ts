@@ -91,7 +91,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   const embed = new EmbedBuilder()
     .setTitle(`${name} (${ticker}) 分析結果`)
     .setColor(analysis.judgment === 'BUY' ? 0x00ff00 : analysis.judgment === 'SELL' ? 0xff0000 : 0xffff00)
-    .setFooter({ text: `データ取得日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}` })
+    .setFooter({ text: `データ取得日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} • 分析モデル: ${modelName}` })
     .setTimestamp()
     .addFields(
       { name: '判定', value: `**${analysis.judgment}**`, inline: true },
