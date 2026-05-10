@@ -382,8 +382,8 @@ client.on('messageCreate', async (message) => {
     // 「入力中...」を表示
     await message.channel.sendTyping();
 
-    // 個別分析は最強の推論モデル(o1-mini)を使用
-    const res = await getAnalysisEmbed(ticker, name, isOwned, avgPrice, "o1-mini");
+    // 個別分析は最新・最強の推論モデル(gpt-5.5)を使用
+    const res = await getAnalysisEmbed(ticker, name, isOwned, avgPrice, "gpt-5.5");
     if (res && res.embed) {
       await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [res.embed] });
     } else {
