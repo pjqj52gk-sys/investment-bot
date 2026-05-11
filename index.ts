@@ -37,11 +37,11 @@ const JP_WATCH_LIST = [
 const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
   { ticker: "SMR", name: "NuScale Power" },
-  { ticker: "BLDP", name: "Ballard Power" },
-  { ticker: "TQQQ", name: "ProShares QQQ 3x", isOwned: true, avgPrice: 75.76 },
-  { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 160.685 },
+  { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.1493 },
+  { ticker: "TQQQ", name: "ProShares QQQ 3x" },
+  { ticker: "SOXL", name: "Semi Bull 3x" },
   { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 18.78 },
+  { ticker: "RGTI", name: "Rigetti Computing" },
   { ticker: "RDDT", name: "Reddit" },
   { ticker: "ARM", name: "Arm Holdings", isOwned: true, avgPrice: 218.06 },
   { ticker: "IONQ", name: "IonQ" },
@@ -393,7 +393,11 @@ client.on('messageCreate', async (message) => {
   const target = jpStock || usStock;
 
   // 監視リストにあるか、あるいは 1234 や NVDA のような形式か判定
-  if (target || /^[0-9A-Z.]+$/.test(content) || (rawContent.length >= 2 && !rawContent.includes(' '))) {
+  // 日本語の長い文章（スペースなし）を誤判定しないように、文字数や記号でチャットと区別する
+  const isLikelyTicker = /^[0-9A-Z.]+$/.test(content);
+  const isShortName = rawContent.length >= 2 && rawContent.length <= 8 && !rawContent.includes(' ') && !rawContent.includes('。') && !rawContent.includes('、');
+
+  if (target || isLikelyTicker || isShortName) {
     const ticker = target ? target.ticker : content;
     const name = target ? target.name : rawContent;
     const isOwned = target ? (target as any).isOwned : false;
