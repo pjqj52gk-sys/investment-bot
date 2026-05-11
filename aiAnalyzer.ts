@@ -219,7 +219,10 @@ ${JSON.stringify(portfolio, null, 2)}
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5.5",
-      messages: [{ role: "system", content: "あなたは優秀な投資アドバイザーです。" }, { role: "user", content: prompt }]
+      messages: [
+        { role: "developer", content: "あなたは優秀な投資アドバイザーです。論理的かつ専門的なアドバイスを提供してください。" },
+        { role: "user", content: prompt }
+      ]
     });
 
     return response.choices[0].message.content || "申し訳ありません、うまく回答を生成できませんでした。";
