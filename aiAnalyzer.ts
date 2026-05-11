@@ -218,12 +218,22 @@ ${JSON.stringify(portfolio, null, 2)}
 
   try {
     const combinedPrompt = `あなたは優秀な投資アドバイザーです。論理的かつ専門的なアドバイスを提供してください。\n\n質問：\n${prompt}`;
-    const response = await openai.chat.completions.create({
-      model: "gpt-5.5",
-      messages: [
-        { role: "user", content: combinedPrompt }
-      ]
-    });
+    let response;
+    
+    try {
+      // 第一候補: 最新の GPT-5.5
+      response = await openai.chat.completions.create({
+        model: "gpt-5.5",
+        messages: [{ role: "user", content: combinedPrompt }]
+      });
+    } catch (e) {
+      console.warn("GPT-5.5 failed, falling back to GPT-4o:", e);
+      // 第二候補: 安定の GPT-4o
+      response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: combinedPrompt }]
+      });
+    }
 
     return response.choices[0].message.content || "申し訳ありません、うまく回答を生成できませんでした。";
   } catch (error) {
