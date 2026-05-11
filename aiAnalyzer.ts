@@ -217,11 +217,11 @@ ${JSON.stringify(portfolio, null, 2)}
 `;
 
   try {
+    const combinedPrompt = `あなたは優秀な投資アドバイザーです。論理的かつ専門的なアドバイスを提供してください。\n\n質問：\n${prompt}`;
     const response = await openai.chat.completions.create({
       model: "gpt-5.5",
       messages: [
-        { role: "developer", content: "あなたは優秀な投資アドバイザーです。論理的かつ専門的なアドバイスを提供してください。" },
-        { role: "user", content: prompt }
+        { role: "user", content: combinedPrompt }
       ]
     });
 
