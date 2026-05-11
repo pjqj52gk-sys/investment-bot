@@ -1,4 +1,4 @@
-import { openai } from './index';
+import { openai } from './openAiConfig';
 
 export interface InvestmentDecision {
   judgment: 'BUY' | 'SELL' | 'HOLD';

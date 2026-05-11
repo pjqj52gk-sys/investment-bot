@@ -1,15 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
+import { openai } from './openAiConfig';
 import { PredictionLog } from './logger';
 import { fetchTechnicalData } from './fetchTechnical';
-
-dotenv.config();
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const logsDir = path.join(process.cwd(), 'logs');
 const predictionsFile = path.join(logsDir, 'predictions.json');
