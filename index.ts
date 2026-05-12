@@ -247,39 +247,50 @@ async function runBatchReflection(list: any[], type: string) {
 }
 
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user?.tag}!`);
+  console.log(`✅ Logged in as ${client.user?.tag}!`);
+  console.log(`📅 Current Server Time: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`);
 
-  // 起動時に1回実行
-  // runBatchAnalysis();
+  const cronOptions = {
+    scheduled: true,
+    timezone: "Asia/Tokyo"
+  };
 
   // 【日本株サイクル】
   // 平日 08:40 予測
   cron.schedule('40 8 * * 1-5', () => {
     runBatchAnalysis(JP_WATCH_LIST, "日本株(前場前)");
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: JP Morning Analysis (08:40)");
+
   // 平日 15:30 反省
   cron.schedule('30 15 * * 1-5', () => {
     runBatchReflection(JP_WATCH_LIST, "日本株(大引け後)");
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: JP Evening Reflection (15:30)");
 
   // 【米国株サイクル】
   // 平日 22:00 予測（オープン前）
   cron.schedule('0 22 * * 1-5', () => {
     runBatchAnalysis(US_WATCH_LIST, "米国株(オープン前)");
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: US Pre-market Analysis (22:00)");
+
   // 平日 22:40 分析（オープン直後）
   cron.schedule('40 22 * * 1-5', () => {
     runBatchAnalysis(US_WATCH_LIST, "米国株(オープン直後)");
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: US Post-market Analysis (22:40)");
+
   // 平日 06:30 反省
   cron.schedule('30 6 * * 2-6', () => {
     runBatchReflection(US_WATCH_LIST, "米国株(クローズ後)");
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: US Morning Reflection (06:30)");
 
   // 1時間おきにポートフォリオのアラートチェック
   cron.schedule('0 * * * *', () => {
     checkPortfolioAlerts();
-  });
+  }, cronOptions);
 
   // 毎朝8:30に重要指標と保有銘柄の決算を通知
   cron.schedule('30 8 * * 1-5', async () => {
@@ -291,10 +302,10 @@ client.once('ready', () => {
     let msg = "☀️ **【朝の投資カレンダー】**\n\n📊 **重要指標**\n" + (eco.length ? eco.slice(0, 5).map(e => `${e.impact} ${e.event}`).join('\n') : "なし") + 
               "\n\n💰 **保有銘柄の決算予定**\n" + (earn.length ? earn.map(e => `🔹 **${e.ticker}**: ${e.date}`).join('\n') : "なし");
     await channel.send(msg);
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: Morning Calendar Alert (08:30)");
 
   // 【週末：統計学習・ルールブック更新】
-  // 毎週土曜日 10:00
   cron.schedule('0 10 * * 6', async () => {
     const channelId = process.env.DISCORD_CHANNEL_ID || "";
     const report = await consolidateRulebook();
@@ -304,7 +315,10 @@ client.once('ready', () => {
       .setColor(0x9b59b6)
       .setTimestamp();
     await sendToChannel(channelId, embed);
-  });
+  }, cronOptions);
+  console.log("📌 Scheduled: Weekend Rulebook Update (Sat 10:00)");
+
+  console.log("🚀 All schedules have been initialized successfully.");
 });
 
 client.on('messageCreate', async (message) => {
