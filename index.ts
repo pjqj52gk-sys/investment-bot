@@ -37,13 +37,12 @@ const JP_WATCH_LIST = [
 const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
   { ticker: "SMR", name: "NuScale Power" },
-  { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.1493 },
+  { ticker: "BLDP", name: "Ballard Power" },
   { ticker: "TQQQ", name: "ProShares QQQ 3x" },
-  { ticker: "SOXL", name: "Semi Bull 3x" },
+  { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 170.6916 },
   { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "RGTI", name: "Rigetti Computing" },
+  { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 19.0564 },
   { ticker: "RDDT", name: "Reddit" },
-  { ticker: "ARM", name: "Arm Holdings", isOwned: true, avgPrice: 218.06 },
   { ticker: "IONQ", name: "IonQ" },
 ];
 
