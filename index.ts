@@ -392,15 +392,22 @@ client.on('messageCreate', async (message) => {
   }
 
   // 一括分析コマンド
-  if (content === '一括分析' || content === '分析 日本') {
+  if (content === '一括分析JP' || content === '分析 日本') {
     message.reply("🇯🇵 日本株の一括分析を開始します（数分かかります）...");
-    runBatchAnalysis(JP_WATCH_LIST, "日本株(手動実行)");
-    if (content === '分析 日本') return;
+    await runBatchAnalysis(JP_WATCH_LIST, "日本株(手動実行)");
+    return;
   }
 
-  if (content === '一括分析' || content === '分析 米国') {
+  if (content === '一括分析US' || content === '分析 米国') {
     message.reply("🇺🇸 米国株の一括分析を開始します（数分かかります）...");
-    runBatchAnalysis(US_WATCH_LIST, "米国株(手動実行)");
+    await runBatchAnalysis(US_WATCH_LIST, "米国株(手動実行)");
+    return;
+  }
+
+  if (content === '一括分析') {
+    message.reply("🚀 全銘柄（日本株 → 米国株）の一括分析を開始します...");
+    await runBatchAnalysis(JP_WATCH_LIST, "日本株(一括)");
+    await runBatchAnalysis(US_WATCH_LIST, "米国株(一括)");
     return;
   }
 
