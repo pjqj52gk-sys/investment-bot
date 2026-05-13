@@ -162,29 +162,54 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
       }
     }
  else if (!ticker.includes('.')) {
-      // --- US株: FMP & Finnhub ---
+      // --- US株: Yahoo Finance (Pre/Post Market) & Finnhub ---
       try {
-        if (fmpKey) {
-          const fmpQuote = await axios.get(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${fmpKey}`);
-          if (fmpQuote.data && fmpQuote.data.length > 0) {
-            finalPrice = fmpQuote.data[0].price;
-            finalChangePercent = fmpQuote.data[0].changesPercentage;
+        // Yahoo Financeから拡張時間帯のデータを取得
+        const yfQuote = await yahooFinance.quote(ticker);
+        if (yfQuote) {
+          const prePrice = yfQuote.preMarketPrice;
+          const postPrice = yfQuote.postMarketPrice;
+          const regularPrice = yfQuote.regularMarketPrice || finalPrice;
+
+          // マーケットの状態に応じて価格を選択
+          if (yfQuote.marketState === 'PRE' && prePrice) {
+            finalPrice = prePrice;
+            finalChangePercent = yfQuote.preMarketChangePercent || 0;
             isRealTime = true;
+            marketTime = yfQuote.preMarketTime || new Date();
+            console.log(`[PRE-MARKET] ${ticker} Price: ${finalPrice}`);
+          } else if (yfQuote.marketState === 'POST' && postPrice) {
+            finalPrice = postPrice;
+            finalChangePercent = yfQuote.postMarketChangePercent || 0;
+            isRealTime = true;
+            marketTime = yfQuote.postMarketTime || new Date();
+            console.log(`[POST-MARKET] ${ticker} Price: ${finalPrice}`);
+          } else {
+            finalPrice = regularPrice;
+            finalChangePercent = yfQuote.regularMarketChangePercent || 0;
+            isRealTime = true;
+            marketTime = yfQuote.regularMarketTime || new Date();
           }
         }
+
+        // Finnhubで補完（差分が大きい場合やYahooが取れなかった場合）
         if (finnhubKey) {
           const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
           if (fhQuote.data && fhQuote.data.c && fhQuote.data.t > 0) {
-            if (Math.abs(fhQuote.data.c - finalPrice) > 0.01 || !isRealTime) {
-              finalPrice = fhQuote.data.c;
-              finalChangePercent = fhQuote.data.dp;
-              isRealTime = true;
-              marketTime = new Date(fhQuote.data.t * 1000);
+            if (Math.abs(fhQuote.data.c - finalPrice) > 0.05 || !isRealTime) {
+              // 通常、Finnhubの'c'は通常セッションの最新価格だが、一部時間はPre/Postも含む
+              // ただしYahooの方が詳細な状態がわかるため、Yahooを優先しつつFinnhubでダブルチェック
+              if (!isRealTime) {
+                finalPrice = fhQuote.data.c;
+                finalChangePercent = fhQuote.data.dp;
+                isRealTime = true;
+                marketTime = new Date(fhQuote.data.t * 1000);
+              }
             }
           }
         }
       } catch (e) {
-        console.log("Real-time API fetch failed, using Yahoo fallback.");
+        console.log("Real-time fetch failed for US stock, using chart fallback.", e);
       }
     }
 
