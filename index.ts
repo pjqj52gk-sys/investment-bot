@@ -153,12 +153,19 @@ async function runBatchAnalysis(list: any[], type: string) {
   const results: { ticker: string, decision: any }[] = [];
 
   for (const stock of list) {
-    const res = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
-    if (res && typeof res !== 'string') {
-      await sendToChannel(channelId, res.embed);
-      results.push({ ticker: stock.ticker, decision: res.decision });
+    try {
+      const res = await getAnalysisEmbed(stock.ticker, stock.name, stock.isOwned, stock.avgPrice);
+      if (res && typeof res !== 'string') {
+        await sendToChannel(channelId, res.embed);
+        results.push({ ticker: stock.ticker, decision: res.decision });
+      }
+    } catch (err) {
+      console.error(`[ERROR] Batch analysis failed for ${stock.ticker}:`, err);
+      // 個別のエラーを通知（任意）
+      // await sendToChannel(channelId, `⚠️ **${stock.ticker}** の分析中にエラーが発生しました。スキップします。`);
     }
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // APIレート制限回避のため5秒待機
+    await new Promise(resolve => setTimeout(resolve, 5000));
   }
 
   // 全銘柄の分析が終わったら、AIに「今日のおすすめ」を決めさせる
