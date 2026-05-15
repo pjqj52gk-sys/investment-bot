@@ -39,7 +39,7 @@ const US_WATCH_LIST = [
   { ticker: "SMR", name: "NuScale Power" },
   { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.0397 },
   { ticker: "TQQQ", name: "ProShares QQQ 3x", isOwned: true, avgPrice: 78.2600 },
-  { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 186.9150 },
+  { ticker: "SOXL", name: "Semiconductor Bull 3x (SOXL)", isOwned: true, avgPrice: 186.9150 },
   { ticker: "NVDA", name: "NVIDIA" },
   { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 18.8280 },
   { ticker: "RDDT", name: "Reddit" },
@@ -86,12 +86,19 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     tavilyData = await fetchTavilyData(ticker, name, modelName === "gpt-5.5");
     if (typeof tavilyData === 'string') {
       // 取得失敗メッセージが文字列で返ってきた場合
-      tavilyData = { summary: "ニュース・外部情報の取得に失敗しました。テクニカル指標のみで判断してください。", name, ticker };
+      tavilyData = { 
+        summary: `ニュース・外部情報の取得に失敗しました。テクニカル指標のみで判断してください。\n(詳細: ${tavilyData})`, 
+        name, 
+        ticker 
+      };
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error(`[DEBUG] Tavily fetch failed for ${ticker}:`, err);
-    // ニュースが取れなくても、空のデータで続行する
-    tavilyData = { summary: "ニュース・外部情報の取得に失敗しました（エラー）。テクニカル指標のみで判断してください。", name, ticker };
+    tavilyData = { 
+      summary: `ニュース・外部情報の取得に失敗しました（エラー）。テクニカル指標のみで判断してください。\n(Error: ${err.message})`, 
+      name, 
+      ticker 
+    };
   }
 
   // AI分析

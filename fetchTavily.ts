@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { fetchRecentNews } from './fetchNews';
 
 dotenv.config();
 
@@ -18,7 +19,11 @@ export async function fetchTavilyData(ticker: string, name: string, deepSearch: 
     return "TAVILY_API_KEYが設定されていません。";
   }
 
-  const query = `${name} (${ticker}) stock market news analysis and latest financial reports`;
+  // クエリをより詳細にする。ETFなどの場合はキーワードを追加
+  const isEtf = ticker.includes('QQQ') || ticker.includes('SOXL') || ticker.includes('VIX');
+  const query = `${name} (${ticker}) ${isEtf ? 'ETF' : ''} stock market news analysis, latest financial reports, and expert sentiment`;
+
+  console.log(`[Tavily] Searching for: ${query} (depth: ${deepSearch ? 'advanced' : 'basic'})`);
 
   try {
     const response = await axios.post(
@@ -29,12 +34,17 @@ export async function fetchTavilyData(ticker: string, name: string, deepSearch: 
         search_depth: deepSearch ? "advanced" : "basic",
         include_answer: true,
         max_results: deepSearch ? 10 : 5,
-        days: 3 // 直近3日間のニュースに絞る
       },
-      { timeout: 10000 }
+      { timeout: 15000 }
     );
 
     const data = response.data;
+    
+    if (!data.results || data.results.length === 0) {
+      console.warn(`[Tavily] No results found for ${ticker}.`);
+      throw new Error("No results found");
+    }
+
     const summary = data.results.map((r: any) => `- ${r.title}\n  ${r.content.substring(0, 200)}...`).join('\n\n');
 
     return {
@@ -44,7 +54,10 @@ export async function fetchTavilyData(ticker: string, name: string, deepSearch: 
       results: data.results,
       summary: `【Tavily検索回答】\n${data.answer || "なし"}\n\n【最新ニュースソース】\n${summary}`
     };
-  } catch (error) {
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message;
+    console.error(`[Tavily] API Error for ${ticker}:`, errorMsg);
+    
     console.warn("Tavily APIエラーのため、Finnhub Newsフォールバックを実行します。");
     
     // Finnhub News フォールバック
@@ -52,7 +65,7 @@ export async function fetchTavilyData(ticker: string, name: string, deepSearch: 
     if (finnhubKey) {
       try {
         const toDate = new Date().toISOString().split('T')[0];
-        const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 過去7日間
+        const fromDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const fhRes = await axios.get(`https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${fromDate}&to=${toDate}&token=${finnhubKey}`);
         
         if (fhRes.data && Array.isArray(fhRes.data) && fhRes.data.length > 0) {
@@ -64,10 +77,29 @@ export async function fetchTavilyData(ticker: string, name: string, deepSearch: 
             results: fhRes.data,
             summary: `【Finnhub提供ニュース】\n${summary}`
           };
+        } else {
+          console.warn(`[Finnhub] No news found for ${ticker} in the last 14 days.`);
         }
-      } catch (fhErr) {
-        console.error("Finnhub Newsフォールバックも失敗しました:", fhErr);
+      } catch (fhErr: any) {
+        console.error("Finnhub Newsフォールバックも失敗しました:", fhErr.message);
       }
+    }
+
+    // NewsAPI (fetchNews.ts) フォールバック
+    console.warn("NewsAPIフォールバックを実行します...");
+    try {
+      const newsApiResult = await fetchRecentNews(name, ticker);
+      if (newsApiResult && !newsApiResult.includes("取得できませんでした") && !newsApiResult.includes("見つかりませんでした")) {
+        return {
+          ticker,
+          name,
+          answer: "NewsAPIからニュースを取得しました。",
+          results: [],
+          summary: `【NewsAPI提供ニュース】\n${newsApiResult}`
+        };
+      }
+    } catch (naErr: any) {
+      console.error("NewsAPIフォールバックも失敗しました:", naErr.message);
     }
 
     return "ニュース情報の取得に失敗しました。";
