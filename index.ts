@@ -84,11 +84,15 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   let tavilyData;
   try {
     tavilyData = await fetchTavilyData(ticker, name, modelName === "gpt-5.5");
+    if (typeof tavilyData === 'string') {
+      // 取得失敗メッセージが文字列で返ってきた場合
+      tavilyData = { summary: "ニュース・外部情報の取得に失敗しました。テクニカル指標のみで判断してください。", name, ticker };
+    }
   } catch (err) {
     console.error(`[DEBUG] Tavily fetch failed for ${ticker}:`, err);
-    return { error: `ニュースデータの取得に失敗しました: ${err.message}` };
+    // ニュースが取れなくても、空のデータで続行する
+    tavilyData = { summary: "ニュース・外部情報の取得に失敗しました（エラー）。テクニカル指標のみで判断してください。", name, ticker };
   }
-  if (typeof tavilyData === 'string') return { error: tavilyData };
 
   // AI分析
   let analysis;

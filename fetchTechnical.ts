@@ -162,50 +162,41 @@ export async function fetchTechnicalData(ticker: string): Promise<TechnicalData 
       }
     }
  else if (!ticker.includes('.')) {
-      // --- US株: Yahoo Finance (Pre/Post Market) & Finnhub ---
+      // --- US株: Finnhub (Regular) & Yahoo Finance (Extended) ---
       try {
-        // Yahoo Financeから拡張時間帯のデータを取得
-        const yfQuote = await yahooFinance.quote(ticker);
-        if (yfQuote) {
-          const prePrice = yfQuote.preMarketPrice;
-          const postPrice = yfQuote.postMarketPrice;
-          const regularPrice = yfQuote.regularMarketPrice || finalPrice;
-
-          // マーケットの状態に応じて価格を選択
-          if (yfQuote.marketState === 'PRE' && prePrice) {
-            finalPrice = prePrice;
-            finalChangePercent = yfQuote.preMarketChangePercent || 0;
-            isRealTime = true;
-            marketTime = yfQuote.preMarketTime || new Date();
-            console.log(`[PRE-MARKET] ${ticker} Price: ${finalPrice}`);
-          } else if (yfQuote.marketState === 'POST' && postPrice) {
-            finalPrice = postPrice;
-            finalChangePercent = yfQuote.postMarketChangePercent || 0;
-            isRealTime = true;
-            marketTime = yfQuote.postMarketTime || new Date();
-            console.log(`[POST-MARKET] ${ticker} Price: ${finalPrice}`);
-          } else {
-            finalPrice = regularPrice;
-            finalChangePercent = yfQuote.regularMarketChangePercent || 0;
-            isRealTime = true;
-            marketTime = yfQuote.regularMarketTime || new Date();
-          }
-        }
-
-        // Finnhubで補完（差分が大きい場合やYahooが取れなかった場合）
+        // 1. まずFinnhubで最新値を取得 (通常セッションに強い)
         if (finnhubKey) {
           const fhQuote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`);
           if (fhQuote.data && fhQuote.data.c && fhQuote.data.t > 0) {
-            if (Math.abs(fhQuote.data.c - finalPrice) > 0.05 || !isRealTime) {
-              // 通常、Finnhubの'c'は通常セッションの最新価格だが、一部時間はPre/Postも含む
-              // ただしYahooの方が詳細な状態がわかるため、Yahooを優先しつつFinnhubでダブルチェック
-              if (!isRealTime) {
-                finalPrice = fhQuote.data.c;
-                finalChangePercent = fhQuote.data.dp;
-                isRealTime = true;
-                marketTime = new Date(fhQuote.data.t * 1000);
-              }
+            finalPrice = fhQuote.data.c;
+            finalChangePercent = fhQuote.data.dp;
+            isRealTime = true;
+            marketTime = new Date(fhQuote.data.t * 1000);
+          }
+        }
+
+        // 2. Yahoo Financeで補完（時間外取引のチェック）
+        const yfQuote = await yahooFinance.quote(ticker);
+        if (yfQuote) {
+          // マーケットがPREまたはPOSTの場合のみ、Yahooの拡張時間価格を優先
+          if ((yfQuote.marketState === 'PRE' || yfQuote.marketState === 'POST')) {
+            const extPrice = yfQuote.marketState === 'PRE' ? yfQuote.preMarketPrice : yfQuote.postMarketPrice;
+            const extChange = yfQuote.marketState === 'PRE' ? yfQuote.preMarketChangePercent : yfQuote.postMarketChangePercent;
+            const extTime = yfQuote.marketState === 'PRE' ? yfQuote.preMarketTime : yfQuote.postMarketTime;
+
+            if (extPrice) {
+              finalPrice = extPrice;
+              finalChangePercent = extChange || 0;
+              isRealTime = true;
+              marketTime = extTime || new Date();
+              console.log(`[EXTENDED-MARKET] ${ticker} Price: ${finalPrice} (${yfQuote.marketState})`);
             }
+          } else if (!isRealTime) {
+            // Finnhubが失敗していた場合のみ、Yahooの通常価格を使う
+            finalPrice = yfQuote.regularMarketPrice || finalPrice;
+            finalChangePercent = yfQuote.regularMarketChangePercent || 0;
+            isRealTime = true;
+            marketTime = yfQuote.regularMarketTime || new Date();
           }
         }
       } catch (e) {
