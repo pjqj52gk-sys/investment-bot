@@ -37,11 +37,11 @@ const JP_WATCH_LIST = [
 const US_WATCH_LIST = [
   { ticker: "BE", name: "Bloom Energy" },
   { ticker: "SMR", name: "NuScale Power" },
-  { ticker: "BLDP", name: "Ballard Power" },
-  { ticker: "TQQQ", name: "ProShares QQQ 3x" },
-  { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 170.6916 },
+  { ticker: "BLDP", name: "Ballard Power", isOwned: true, avgPrice: 4.0397 },
+  { ticker: "TQQQ", name: "ProShares QQQ 3x", isOwned: true, avgPrice: 78.2600 },
+  { ticker: "SOXL", name: "Semi Bull 3x", isOwned: true, avgPrice: 186.9150 },
   { ticker: "NVDA", name: "NVIDIA" },
-  { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 19.0564 },
+  { ticker: "RGTI", name: "Rigetti Computing", isOwned: true, avgPrice: 18.8280 },
   { ticker: "RDDT", name: "Reddit" },
   { ticker: "IONQ", name: "IonQ" },
 ];
@@ -52,8 +52,14 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   const totalCapital = Number(process.env.TOTAL_CAPITAL) || 0;
 
   // テクニカルデータ取得
-  const technical = await fetchTechnicalData(ticker);
-  if (typeof technical === 'string') return null;
+  let technical;
+  try {
+    technical = await fetchTechnicalData(ticker);
+  } catch (err) {
+    console.error(`[DEBUG] Technical fetch failed for ${ticker}:`, err);
+    return { error: `テクニカルデータの取得に失敗しました: ${err.message}` };
+  }
+  if (typeof technical === 'string') return { error: technical };
 
   // 手動設定がある場合は上書き
   if (manualOwned) {
@@ -65,7 +71,7 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
     const pnlPercent = ((pnl / (technical.avgPrice || 1)) * 100).toFixed(2);
     const pnlInfo = `【保有状況】 取得単価: ${technical.avgPrice}, 損益: ${pnl.toFixed(2)} (${pnlPercent}%)`;
 
-    // summaryを再構築（既存のsummaryから保有状況の行を差し替える）
+    // summaryを再構築
     const lines = technical.summary.split('\n');
     const newLines = lines.map(line => line.includes('【保有状況】') ? pnlInfo : line);
     if (!lines.some(l => l.includes('【保有状況】'))) {
@@ -75,11 +81,24 @@ async function getAnalysisEmbed(ticker: string, name: string, manualOwned: boole
   }
 
   // Tavilyから市場情報・ニュースを一括取得
-  const tavilyData = await fetchTavilyData(ticker, name, modelName === "gpt-5.5");
-  if (typeof tavilyData === 'string') return null;
+  let tavilyData;
+  try {
+    tavilyData = await fetchTavilyData(ticker, name, modelName === "gpt-5.5");
+  } catch (err) {
+    console.error(`[DEBUG] Tavily fetch failed for ${ticker}:`, err);
+    return { error: `ニュースデータの取得に失敗しました: ${err.message}` };
+  }
+  if (typeof tavilyData === 'string') return { error: tavilyData };
 
   // AI分析
-  const analysis = await analyzeInvestment(technical, tavilyData, totalCapital, marketContext, modelName);
+  let analysis;
+  try {
+    analysis = await analyzeInvestment(technical, tavilyData, totalCapital, marketContext, modelName);
+  } catch (err) {
+    console.error(`[DEBUG] AI Analysis failed for ${ticker}:`, err);
+    return { error: `AIによる分析に失敗しました: ${err.message}` };
+  }
+  if (!analysis) return { error: "AIが分析結果を返しませんでした。" };
 
   // 予測結果をログに保存 (自己学習用)
   savePrediction(ticker, technical.currentPrice, analysis);
@@ -440,7 +459,8 @@ client.on('messageCreate', async (message) => {
     if (res && res.embed) {
       await statusMsg.edit({ content: `✅ **${name} (${ticker})** の分析が完了しました！`, embeds: [res.embed] });
     } else {
-      await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。入力が正しいか確認してください。`);
+      const errMsg = (res as any)?.error || "不明なエラーが発生しました。";
+      await statusMsg.edit(`❌ **${name} (${ticker})** の分析中にエラーが発生しました。\n理由: \`${errMsg}\``);
     }
   } else if (rawContent.length >= 5 && (rawContent.includes('？') || rawContent.includes('?') || rawContent.length > 10)) {
     // どのコマンドや銘柄にも該当しない場合は、一般質問としてAIに聞く
