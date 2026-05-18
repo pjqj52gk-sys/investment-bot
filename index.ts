@@ -29,8 +29,8 @@ const JP_WATCH_LIST = [
   { ticker: "7013.T", name: "IHI" },
   { ticker: "6762.T", name: "TDK" },
   { ticker: "9984.T", name: "ソフトバンクグループ" },
-  { ticker: "6954.T", name: "ファナック" },
-  { ticker: "6324.T", name: "ハーモニック・ドライブ" },
+  { ticker: "6954.T", name: "ファナック", isOwned: true, avgPrice: 8646 },
+  { ticker: "6324.T", name: "ハーモニック・ドライブ", isOwned: true, avgPrice: 6946 },
   { ticker: "6857.T", name: "アドバンテスト" },
 ];
 
