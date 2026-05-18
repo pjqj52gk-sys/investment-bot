@@ -75,8 +75,7 @@ ${JSON.stringify(technical.financials?.socialSentiment || {})}
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      response_format: { type: "json_object" },
-      temperature: 0.7 // 少し柔軟な発想を許可
+      response_format: { type: "json_object" }
     });
 
     return JSON.parse(response.choices[0].message.content || "{}");
